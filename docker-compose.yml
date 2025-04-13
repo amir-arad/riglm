@@ -1,0 +1,17 @@
+services:
+  abc-server:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile
+      # Enable BuildKit features
+      args:
+        BUILDKIT_INLINE_CACHE: 1
+    ports:
+      - "3000:3000" # Match the port inside the container
+    env_file:
+      - ./server/.env
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data # For database persistence
+    restart: unless-stopped
