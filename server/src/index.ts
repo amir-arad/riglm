@@ -1,16 +1,12 @@
-import express from "express";
 import cors from "cors";
+import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
-import passport from "passport";
 import path from "path";
-import { Strategy as OAuth2Strategy } from "passport-oauth2";
 import apiRoutes from "./api";
-import { loginRoutes } from "./api/login";
-import { env, connectToDatabase, setupDatabaseEventHandlers } from "./config";
-import { notFoundHandler, errorHandler, configurePassport } from "./middleware";
+import { connectToDatabase, env, setupDatabaseEventHandlers } from "./config";
+import { errorHandler, notFoundHandler } from "./middleware";
 import { logger, morganStream } from "./utils";
-import { User, UserRole } from "./models";
 
 // Create Express app
 const app = express();
@@ -34,61 +30,7 @@ connectToDatabase()
     app.use(morgan("combined", { stream: morganStream }));
 
     // Serve static files from the client build
-    const clientBuildPath = path.join(__dirname, "../client-build");
-    app.use(express.static(clientBuildPath));
-
-    // Configure passport
-    configurePassport("fake-server");
-    app.use(passport.initialize());
-
-    // Configure OAuth2 strategy
-    if (env.oauth.clientId && env.oauth.clientSecret) {
-      passport.use(
-        new OAuth2Strategy(
-          {
-            authorizationURL: "https://oauth-provider.com/auth",
-            tokenURL: "https://oauth-provider.com/token",
-            clientID: env.oauth.clientId,
-            clientSecret: env.oauth.clientSecret,
-            callbackURL: env.oauth.callbackUrl,
-            passReqToCallback: true, // Pass request to callback
-          },
-          async (
-            req: express.Request,
-            accessToken: string,
-            refreshToken: string,
-            profile: any,
-            done: (error: any, user?: any) => void
-          ) => {
-            try {
-              // Find or create user
-              const UserModel = User as any; // Type assertion to avoid TypeScript errors
-              let user = await UserModel.findOne({ email: profile.email });
-
-              if (!user) {
-                // Create new user
-                user = await UserModel.create({
-                  email: profile.email,
-                  name: profile.name || profile.email,
-                  role: UserRole.USER,
-                });
-              }
-
-              // Update last login
-              user.lastLogin = new Date();
-              await user.save();
-
-              return done(null, user);
-            } catch (error) {
-              return done(error);
-            }
-          }
-        )
-      );
-    }
-
-    // Mount login routes at root level
-    app.use("/login", loginRoutes);
+    app.use(express.static(env.clientBuildPath));
 
     // Mount API routes
     app.use("/api", apiRoutes);
@@ -99,7 +41,7 @@ connectToDatabase()
       if (req.path.startsWith("/api")) {
         return next();
       }
-      res.sendFile(path.join(clientBuildPath, "index.html"));
+      res.sendFile(path.join(env.clientBuildPath, "index.html"));
     });
 
     // Handle 404 errors

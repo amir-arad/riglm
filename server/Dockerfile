@@ -46,7 +46,8 @@ ENV NODE_ENV=production \
     SQLITE_DB_PATH=./data/database.sqlite \
     LOG_LEVEL=info \
     CORS_ORIGIN=* \
-    ALLOWED_REDIRECT_DOMAINS=localhost
+    ALLOWED_REDIRECT_DOMAINS=localhost \
+    CLIENT_BUILD_PATH=client-build
 
 # Create non-root user for security
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

@@ -4,6 +4,6 @@ import { createClient, getAccessToken } from 'b44-sdk';
 // Create a client with authentication required
 export const appSdk = createClient({
     appId: '67f92d8d8df675b48c5f25b2',
-    requiresAuth: true,
+    requiresAuth: false,
     auth: getAccessToken,
 });

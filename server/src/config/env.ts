@@ -54,28 +54,6 @@ export const env = {
   },
 
   /**
-   * OAuth configuration
-   */
-  oauth: {
-    /**
-     * OAuth client ID
-     */
-    clientId: process.env.OAUTH_CLIENT_ID || "",
-
-    /**
-     * OAuth client secret
-     */
-    clientSecret: process.env.OAUTH_CLIENT_SECRET || "",
-
-    /**
-     * OAuth callback URL
-     */
-    callbackUrl:
-      process.env.OAUTH_CALLBACK_URL ||
-      "http://localhost:3000/api/auth/callback",
-  },
-
-  /**
    * Logging configuration
    */
   logging: {
@@ -114,4 +92,9 @@ export const env = {
    */
   isDevelopment:
     process.env.NODE_ENV === "development" || !process.env.NODE_ENV,
+
+  clientBuildPath: path.join(
+    process.cwd(),
+    process.env.CLIENT_BUILD_PATH || "."
+  ),
 };

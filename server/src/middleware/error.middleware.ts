@@ -1,15 +1,21 @@
-import { Request, Response, NextFunction } from 'express';
-import { ApiError } from '../utils/error';
-import { logger } from '../utils/logger';
-import { env } from '../config/env';
+import { Request, Response, NextFunction } from "express";
+import { ApiError } from "../utils/error";
+import { logger } from "../utils/logger";
+import { env } from "../config/env";
 
 /**
  * Handle 404 errors
  */
-export function notFoundHandler(req: Request, res: Response, next: NextFunction): void {
+export function notFoundHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   // Create not found error
-  const error = ApiError.notFound(`Route not found: ${req.method} ${req.originalUrl}`);
-  
+  const error = ApiError.notFound(
+    `Route not found: ${req.method} ${req.originalUrl}`
+  );
+
   // Pass error to error handler
   next(error);
 }
@@ -27,16 +33,18 @@ export function errorHandler(
   // Default status code and error
   let statusCode = 500;
   let error = err;
-  
+
   // If error is not an ApiError, convert it
   if (!(error instanceof ApiError)) {
     statusCode = 500;
-    error = ApiError.internal(env.isProduction ? 'Internal Server Error' : error.message);
+    error = ApiError.internal(
+      env.isProduction ? "Internal Server Error" : error.message
+    );
   } else {
     // Use ApiError status code
     statusCode = error.statusCode;
   }
-  
+
   // Log error
   if (statusCode >= 500) {
     logger.error(`${statusCode} - ${error.message}`, {
@@ -50,10 +58,10 @@ export function errorHandler(
       method: req.method,
     });
   }
-  
+
   // Send error response
   res.status(statusCode).json({
-    status: 'error',
+    status: "error",
     message: error.message,
     code: error instanceof ApiError ? error.code : undefined,
     data: error instanceof ApiError ? error.data : undefined,
