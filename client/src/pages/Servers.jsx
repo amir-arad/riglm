@@ -1,4 +1,5 @@
 import { Server } from '@/api/entities';
+import { rpc } from '@/api/rpc';
 import ServerForm from '@/components/servers/ServerForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -113,24 +114,7 @@ export default function ServersPage() {
     const handleRefreshStatus = async (serverId) => {
         setRefreshing((prev) => ({ ...prev, [serverId]: true }));
         try {
-            // Simulate status check - in a real app this would make an actual connection test
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-
-            const server = servers.find((s) => s.id === serverId);
-            if (server) {
-                // Randomly assign a status for demo purposes
-                const newStatus = Math.random() > 0.3 ? 'active' : 'error';
-                const error =
-                    newStatus === 'error' ? 'Connection refused' : null;
-
-                await Server.update(serverId, {
-                    status: newStatus,
-                    error: error,
-                    lastConnected:
-                        newStatus === 'active'
-                            ? new Date().toISOString()
-                            : server.lastConnected,
-                });
+            if (await rpc.connectServer(serverId)) {
                 fetchServers();
             }
         } catch (error) {

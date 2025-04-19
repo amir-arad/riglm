@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { ApiError } from "../utils/error";
-import { logger } from "../utils/logger";
-import { env } from "../config/env";
+import { ApiError } from "./error";
+import { logger } from "./logger";
+import { env } from "./env";
 
 /**
  * Handle 404 errors

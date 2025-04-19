@@ -1,5 +1,5 @@
 import winston from "winston";
-import { env } from "../config/env";
+import { env } from "./env";
 
 /**
  * Create a logger instance

@@ -6,7 +6,7 @@
     "scripts": {
         "build": "vite build",
         "build:watch": "vite build --watch",
-        "dev": "vite",
+        "dev": "vite  --port 8080",
         "lint": "eslint .",
         "lintify": "eslint --fix .",
         "prettify": "prettier --write .",
@@ -59,6 +59,7 @@
         "recharts": "^2.15.1",
         "sonner": "^2.0.1",
         "tailwind-merge": "^3.0.2",
+        "typed-rpc": "^6.1.1",
         "vaul": "^1.1.2",
         "zod": "^3.24.2"
     },

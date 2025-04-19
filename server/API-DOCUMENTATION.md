@@ -96,7 +96,7 @@ The `IDocument` interface and `Document` class provide the base structure for al
 
 ```typescript
 interface IDocument {
-  _id: string;
+  id: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -106,7 +106,7 @@ interface IDocument {
 
 ```typescript
 class Document implements IDocument {
-  _id: string;
+  id: string;
   createdAt: Date;
   updatedAt: Date;
   
@@ -117,7 +117,7 @@ class Document implements IDocument {
 
 ### Properties
 
-- **`_id`**: Unique identifier for the document
+- **`id`**: Unique identifier for the document
 - **`createdAt`**: Timestamp of when the document was created
 - **`updatedAt`**: Timestamp of when the document was last updated
 
@@ -131,7 +131,7 @@ Creates a new document with the provided data.
   - `data`: Optional partial document data
 - **Example:**
   ```typescript
-  const doc = new Document({ _id: 'custom_id' });
+  const doc = new Document({ id: 'custom_id' });
   ```
 
 #### `toJSON()`

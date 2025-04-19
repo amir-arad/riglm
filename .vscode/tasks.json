@@ -3,12 +3,12 @@
   "tasks": [
     {
       "type": "npm",
-      "script": "build:watch",
+      "script": "dev",
       "path": "client",
       "group": "build",
       "problemMatcher": [],
-      "label": "npm: build:watch - client",
-      "detail": "vite build --watch"
+      "label": "npm: dev - client",
+      "detail": "dev"
     }
   ]
 }

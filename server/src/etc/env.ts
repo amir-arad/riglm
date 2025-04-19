@@ -19,23 +19,12 @@ export const env = {
   port: parseInt(process.env.PORT || "3000", 10),
 
   /**
-   * Database configuration
+   * SQLite database path
+   * Only used when type is 'sqlite'
    */
-  database: {
-    /**
-     * Database type
-     * Can be 'in-memory' or 'sqlite'
-     */
-    type: process.env.DB_TYPE || "in-memory",
-
-    /**
-     * SQLite database path
-     * Only used when type is 'sqlite'
-     */
-    sqlitePath:
-      process.env.SQLITE_DB_PATH ||
-      path.join(process.cwd(), "data", "database.sqlite"),
-  },
+  sqlitePath:
+    process.env.SQLITE_DB_PATH ||
+    path.join(process.cwd(), "data", "database.sqlite"),
 
   /**
    * JWT configuration
