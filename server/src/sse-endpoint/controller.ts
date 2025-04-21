@@ -1,123 +1,42 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import {
-  CallToolRequestSchema,
-  ErrorCode,
-  ListToolsRequestSchema,
-  McpError,
-} from "@modelcontextprotocol/sdk/types.js";
+import { Request, Response, Router } from "express";
 import { logger } from "../etc/logger";
-import { SessionManager } from "./session-manager";
-import { Router } from "express";
+import { EndpointService, endpointServices } from "./endpoint.service";
 
 export const endpointsRoutes = Router();
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  inputSchema: {
-    type: string;
-    properties: Record<string, any>;
-    required: string[];
-  };
-}
-
-export interface McpToolResponse {
-  content: Array<{
-    type: string;
-    text: string;
-  }>;
-  isError?: boolean;
-}
-export type Handler = {
-  handle(args: Record<string, unknown> | undefined): Promise<McpToolResponse>;
+type EndpointRequest = Request<{
+  endpointId: string;
+  sessionId?: string;
+}> & {
+  endpointService: EndpointService;
 };
-const handlers = new Map<string, [Handler, Omit<ToolDefinition, "name">]>();
-handlers.set("foo", [
-  {
-    async handle(
-      args: Record<string, unknown> | undefined
-    ): Promise<McpToolResponse> {
-      return {
-        content: [],
-      };
-    },
-  },
-  {
-    description: "bar",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description: "the query",
-        },
-        limit: {
-          type: "number",
-          description: "Maximum number of results to return",
-          default: 5,
-        },
-      },
-      required: ["query"],
-    },
-  },
-]);
-const mcpServer = new Server(
-  {
-    name: "abc-endpoints",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {
-        listChanged: true,
-      },
-    },
-  }
-);
-mcpServer.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [...handlers.entries()].map(([name, [, tool]]) => ({
-    ...tool,
-    name,
-  })),
-}));
 
-mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const endpoinmt = handlers.get(request.params.name);
-  if (!endpoinmt) {
-    throw new McpError(
-      ErrorCode.MethodNotFound,
-      `Unknown tool: ${request.params.name}`
-    );
-  }
-
-  const response = await endpoinmt[0].handle(request.params.arguments);
-  return {
-    _meta: {},
-    ...response,
-  };
-});
-mcpServer.onerror = (error) => logger.error("[MCP Error]", error);
-const sessionManager = new SessionManager(mcpServer, {
-  inactivityThreshold: 30 * 60 * 1000, // 30 minutes
-  cleanupInterval: 5 * 60 * 1000, // 5 minutes
-});
-// SSE endpoint
-endpointsRoutes.get("/sse", async (req: any, res: any) => {
+endpointsRoutes.param("endpointId", async (req, res, next, endpointId) => {
   try {
-    // Create a new session
-    const sessionId = await sessionManager.createSession("/messages", res);
+    const endpointService = await endpointServices.get(endpointId);
+    if (!endpointService) {
+      return res.status(404).json({ error: "Endpoint not found" }), void 0;
+    }
+    (req as EndpointRequest).endpointService = endpointService;
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
-    // Send the session ID as the first SSE message
+endpointsRoutes.get("/:endpointId/sse", async (req, res) => {
+  try {
+    const { endpointService } = req as EndpointRequest;
+    const sessionId = await endpointService.createSession(
+      `/${endpointService.endpointId}/messages`,
+      res
+    );
     res.write(`event: session\ndata: ${JSON.stringify({ sessionId })}\n\n`);
-
-    // Send the endpoint event with the full URI for sending messages
-    const messageEndpoint = `/messages/${sessionId}`;
+    const messageEndpoint = `/${endpointService.endpointId}/messages/${sessionId}`;
     res.write(`event: endpoint\ndata: ${messageEndpoint}\n\n`);
-
-    // Set up connection close handler
     req.on("close", () => {
       logger.info(`SSE connection closed for session: ${sessionId}`);
-      sessionManager.removeSession(sessionId);
+      endpointService.removeSession(sessionId);
     });
 
     logger.info(`SSE connection established for session: ${sessionId}`);
@@ -127,62 +46,43 @@ endpointsRoutes.get("/sse", async (req: any, res: any) => {
   }
 });
 
-endpointsRoutes.post("/messages", async (req: any, res: any) => {
-  // Extract session ID from headers or query parameters
+endpointsRoutes.post("/:endpointId/messages", async (req, res) => {
   const sessionId = req.headers["x-session-id"] || req.query.sessionId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sessionManager.hasSession(sessionId)) {
-    return res.status(404).json({ error: "Session not found" });
-  }
-
-  const session = sessionManager.getSession(sessionId);
-  if (session) {
-    try {
-      await session.transport.handlePostMessage(req, res);
-    } catch (error) {
-      logger.error(`Error handling message for session ${sessionId}:`, error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  } else {
-    res.status(503).json({ error: "Session transport not available" });
-  }
+  await handleMessage(sessionId, req, res);
 });
-// Message endpoint for client to send messages
-endpointsRoutes.post("/messages/:sessionId", async (req: any, res: any) => {
+endpointsRoutes.post("/:endpointId/messages/:sessionId", async (req, res) => {
   const sessionId = req.params.sessionId;
-
-  if (!sessionManager.hasSession(sessionId)) {
-    return res.status(404).json({ error: "Session not found" });
-  }
-
-  const session = sessionManager.getSession(sessionId);
-  if (session) {
-    try {
-      await session.transport.handlePostMessage(req, res);
-    } catch (error) {
-      logger.error(`Error handling message for session ${sessionId}:`, error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  } else {
-    res.status(503).json({ error: "Session transport not available" });
-  }
+  await handleMessage(sessionId, req, res);
 });
 
-// Add status endpoint for monitoring
-endpointsRoutes.get("/status", (_req: any, res: any) => {
+async function handleMessage(sessionId: unknown, req: Request, res: Response) {
+  const { endpointService } = req as EndpointRequest;
+  if (!sessionId || typeof sessionId !== "string") {
+    return res.status(400).json({ error: "Session ID is required" }), void 0;
+  }
+  if (!endpointService.hasSession(sessionId)) {
+    return res.status(404).json({ error: "Session not found" }), void 0;
+  }
+  const session = endpointService.getSession(sessionId);
+  if (!session) {
+    return (
+      res.status(503).json({ error: "Session transport not available" }), void 0
+    );
+  }
+
+  try {
+    await session.transport.handlePostMessage(req, res);
+  } catch (error) {
+    logger.error(`Error handling message for session ${sessionId}:`, error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+endpointsRoutes.get("/:endpointId/status", (req, res) => {
+  const { endpointService } = req as EndpointRequest;
   res.json({
-    status: "ok",
-    activeSessions: sessionManager.getActiveSessions(),
+    ...endpointService.status(),
     uptime: process.uptime(),
     memory: process.memoryUsage(),
   });
 });
-
-export async function endpointsCleanup() {
-  await sessionManager.cleanup();
-  await mcpServer.close();
-}

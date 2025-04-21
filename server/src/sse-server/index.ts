@@ -6,6 +6,8 @@ import {
 } from "@modelcontextprotocol/sdk/client/sse.js";
 import * as entityModel from "../entities/entity.model";
 
+import { type RpcService } from "typed-rpc/server";
+import { getServerEntityById } from "../entities/server";
 type TransportOptions = {
   transportType: "sse";
   url: string;
@@ -41,9 +43,9 @@ const createTransport = (options: TransportOptions) => {
 
 export async function connectServer(serverId: string) {
   console.log("Connecting to server:", serverId);
-  const serverEntity = await entityModel.getById("server", serverId);
+  const serverEntity = await getServerEntityById(serverId);
   if (!serverEntity) {
-    return null;
+    throw new Error(`Server with ID ${serverId} not found`);
   }
   try {
     const backingServerTransport = createTransport({
@@ -88,18 +90,18 @@ export async function connectServer(serverId: string) {
       error: errorMessage,
       tools: [],
     });
-    return null;
+    throw error;
   }
 }
 
 export const sseServerActions = {
   async connectServer(serverId: string) {
-    try {
-      const tools = await connectServer(serverId);
-      return tools;
-    } catch (error) {
-      console.error("Error connecting to server:", error);
-      return null;
+    if (!serverId) {
+      throw new Error("Server ID is required");
     }
+    console.log("Connecting to server with ID:", serverId);
+    await connectServer(serverId);
   },
 };
+
+export type SseServerActions = RpcService<typeof sseServerActions, void>;

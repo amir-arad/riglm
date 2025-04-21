@@ -1,16 +1,16 @@
 import cors from "cors";
-import express from "express";
+import express, { Router, json } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
+import { handleRpc } from "typed-rpc/server";
 import { entitiesRoutes } from "./entities/entity.controller";
 import { close, init } from "./entities/entity.model";
 import { env } from "./etc/env";
 import { errorHandler, notFoundHandler } from "./etc/error.middleware";
 import { logger, morganStream } from "./etc/logger";
-import { endpointsCleanup, endpointsRoutes } from "./sse-endpoint/controller";
-import { Router, json } from "express";
-import { handleRpc } from "typed-rpc/server";
-import { sseServerActions } from "./sse-server";
+import { endpointsRoutes } from "./sse-endpoint/controller";
+import { endpointServices } from "./sse-endpoint/endpoint.service";
+import { SseServerActions, sseServerActions } from "./sse-server";
 
 const app = express();
 app.use(helmet());
@@ -29,7 +29,7 @@ app.use(endpointsRoutes);
 export const rpcRoutes = Router();
 rpcRoutes.use(json());
 rpcRoutes.post("/", (req, res, next) => {
-  handleRpc(req.body, sseServerActions)
+  handleRpc<SseServerActions>(req.body, sseServerActions)
     .then((result) => res.json(result))
     .catch(next);
 });
@@ -37,7 +37,6 @@ rpcRoutes.post("/", (req, res, next) => {
 app.use("/rpc", rpcRoutes);
 // Handle 404 errors
 app.use(notFoundHandler);
-
 // Handle errors
 app.use(errorHandler);
 init();
@@ -72,7 +71,7 @@ async function cleanup(errorCode = 0) {
       resolve(true);
     });
   });
-  await endpointsCleanup();
+  await endpointServices.close();
   if (errorCode) {
     logger.error("Server exited with error code", { errorCode });
   }

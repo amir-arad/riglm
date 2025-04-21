@@ -9,6 +9,14 @@
       "problemMatcher": [],
       "label": "npm: dev - client",
       "detail": "dev"
+    },
+    {
+      "type": "npm",
+      "script": "inspector",
+      "path": "server",
+      "problemMatcher": [],
+      "label": "inspector",
+      "detail": "mcp-inspector http://localhost:3000/q1/sse"
     }
   ]
 }

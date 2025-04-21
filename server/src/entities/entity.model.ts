@@ -238,7 +238,7 @@ export async function bulkCreate(
 }
 
 // Type definition for entity documents
-interface IEntity {
+export interface IEntity {
   id: string;
   createdAt: Date;
   updatedAt: Date;
