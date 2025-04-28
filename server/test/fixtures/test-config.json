@@ -1,0 +1,20 @@
+{
+  "$schema": "../../config-schema.json",
+  "servers": {
+    "mock_server": {
+      "url": "http://localhost:3000/sse"
+    }
+  },
+  "contexts": {
+    "test_context": {
+      "description": "Test context for e2e tests",
+      "servers": ["mock_server"]
+    }
+  },
+  "endpoints": {
+    "test_endpoint": {
+      "description": "Test endpoint for e2e tests",
+      "contexts": ["test_context"]
+    }
+  }
+}

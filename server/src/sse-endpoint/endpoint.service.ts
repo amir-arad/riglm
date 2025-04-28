@@ -9,8 +9,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ServerResponse } from "http";
 import { JSONSchema7 } from "json-schema";
-import { getContextEntityById } from "../entities/context";
-import { getEndpointEntityByName } from "../entities/endpoint";
+import { getCurrentConfig } from "../config";
 import { logger } from "../etc/logger";
 import { makeServicesContainer } from "../etc/service";
 import { sessionServerConnections } from "../sse-server/server.service";
@@ -21,10 +20,20 @@ export const endpointServices = makeServicesContainer(makeEndpointService);
 
 async function makeEndpointService(name: string) {
   type ToolEntry = [ToolDefinition, ToolHandler];
+
+  // Check if endpoint exists in config
+  const config = getCurrentConfig();
+  const endpoint = config.endpoints[name];
+
+  if (!endpoint) {
+    throw new Error(`Endpoint "${name}" not found in configuration`);
+  }
+
+  // Create MCP server
   const mcpServer = new Server(
     {
       name,
-      description: "abc Endpoint " + name,
+      description: endpoint.description || `Endpoint ${name}`,
       version: "1.0.0",
     },
     {
@@ -35,69 +44,76 @@ async function makeEndpointService(name: string) {
       },
     }
   );
+
   const tsm = new TransportSessionManager(mcpServer, {
     inactivityThreshold: 30 * 60 * 1000,
     cleanupInterval: 5 * 60 * 1000,
   });
 
+  // Create app sessions container
   const appSessions = makeServicesContainer(async (sessionId: string) => {
     const proxyConnections = sessionServerConnections(sessionId);
-    const endpointEntity = await getEndpointEntityByName(name);
-    const contexts = await Promise.all(
-      endpointEntity.contextIds.map(async (contextId) => {
-        const contextEntity = await getContextEntityById(contextId);
-        if (!contextEntity) {
-          throw new Error(`Context with ID ${contextId} not found`);
-        }
-        return contextEntity;
-      })
+
+    // Get contexts from config
+    const contexts = endpoint.contexts.map((contextName) => {
+      const context = config.contexts[contextName];
+      if (!context) {
+        throw new Error(`Context "${contextName}" not found in configuration`);
+      }
+      return {
+        name: contextName,
+        ...context,
+      };
+    });
+
+    // Get all unique server names referenced by contexts
+    const serverNames = Array.from(
+      new Set(contexts.flatMap((context) => context.servers))
     );
-    const serverIds = Array.from(
-      new Set(
-        contexts.flatMap((context) =>
-          context.tools.map((tool) => tool.serverId)
-        )
-      )
-    );
+
+    // Connect to all required servers
     const proxyTargets = new Map(
-      (await Promise.all(serverIds.map(proxyConnections.get))).map((s) => [
-        s.serverId,
-        s,
-      ])
+      (
+        await Promise.all(
+          serverNames.map((serverName) => proxyConnections.get(serverName))
+        )
+      ).map((server) => [server.serverName, server])
     );
-    const toolEntries = contexts.flatMap((context) =>
-      context.tools.map((tool) => {
-        const target = proxyTargets.get(tool.serverId);
+
+    // For each server, retrieve all its tools
+    // In the MVP, we expose all tools from all servers in the contexts
+    const toolEntries: ToolEntry[] = [];
+
+    for (const context of contexts) {
+      for (const serverName of context.servers) {
+        const target = proxyTargets.get(serverName);
         if (!target) {
-          throw new Error(`Server with ID ${tool.serverId} not found`);
-        }
-        // TODO if (tool.originalName === '*')
-        const remoteTool = target.tools.find(
-          (t) => t.name === tool.originalName
-        );
-        if (!remoteTool) {
           throw new Error(
-            `Server ${tool.serverId} does not have tool ${tool.originalName}`
+            `Server "${serverName}" not found or connection failed`
           );
         }
-        return [
-          {
-            name: tool.exposedName,
-            description: tool.description || remoteTool.description || "",
-            inputSchema: (remoteTool.inputSchema || {}) as JSONSchema7, // TODO tool.inputSchema || remoteTool.inputSchema,
-          },
-          async function (args: Record<string, unknown> | undefined) {
-            return target.client.callTool(
-              {
-                name: tool.originalName,
-                arguments: args,
-              },
-              CallToolResultSchema
-            ) as Promise<CallToolResult>;
-          },
-        ] satisfies ToolEntry;
-      })
-    );
+
+        // Include all tools from this server
+        for (const remoteTool of target.tools) {
+          toolEntries.push([
+            {
+              name: remoteTool.name, // Use original name - no aliasing in MVP
+              description: remoteTool.description || "",
+              inputSchema: (remoteTool.inputSchema || {}) as JSONSchema7,
+            },
+            async function (args: Record<string, unknown> | undefined) {
+              return target.client.callTool(
+                {
+                  name: remoteTool.name,
+                  arguments: args,
+                },
+                CallToolResultSchema
+              ) as Promise<CallToolResult>;
+            },
+          ]);
+        }
+      }
+    }
 
     return {
       tools: toolEntries.map(([tool]) => tool),
@@ -111,7 +127,14 @@ async function makeEndpointService(name: string) {
     };
   });
 
+  // Session initialization
   async function initSession(endpoint: string, res: ServerResponse) {
+    // Check for API key if configured
+    if (config.endpoints[endpoint]?.apiKey) {
+      // API key validation would happen here
+      // Not implemented in this basic version
+    }
+
     const transportSession = await tsm.createSession(endpoint, res);
     const { sessionId } = transportSession;
     const appSession = await appSessions.get(sessionId);
@@ -123,6 +146,7 @@ async function makeEndpointService(name: string) {
     return sessionId;
   }
 
+  // Set up request handlers
   mcpServer.setRequestHandler(
     ListToolsRequestSchema,
     async (_, { signal, sessionId }) => {
@@ -153,6 +177,7 @@ async function makeEndpointService(name: string) {
       return handler(request.params.arguments);
     }
   );
+
   mcpServer.onerror = (error) => logger.error("[MCP Error]", error);
 
   return {

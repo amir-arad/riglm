@@ -1,18 +1,18 @@
-// import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
   SSEClientTransport,
   SseError,
 } from "@modelcontextprotocol/sdk/client/sse.js";
-import * as entityModel from "../entities/entity.model";
-
+import { getCurrentConfig, isRemoteServer } from "../config";
+import { logger } from "../etc/logger";
 import { type RpcService } from "typed-rpc/server";
-import { getServerEntityById } from "../entities/server";
+
 type TransportOptions = {
   transportType: "sse";
   url: string;
   headers?: Record<string, string>;
 };
+
 const createTransport = (options: TransportOptions) => {
   const { transportType } = options;
   if (transportType === "sse") {
@@ -22,7 +22,7 @@ const createTransport = (options: TransportOptions) => {
     }
     headers["Accept"] = "text/event-stream";
 
-    console.log(`SSE transport: url=${url}, headers=${Object.keys(headers)}`);
+    logger.info(`SSE transport: url=${url}, headers=${Object.keys(headers)}`);
 
     const transport = new SSEClientTransport(new URL(url), {
       eventSourceInit: {
@@ -33,30 +33,39 @@ const createTransport = (options: TransportOptions) => {
       },
     });
 
-    console.log("Connected to SSE transport");
+    logger.info("Connected to SSE transport");
     return transport;
   } else {
-    console.error(`Invalid transport type: ${transportType}`);
+    logger.error(`Invalid transport type: ${transportType}`);
     throw new Error("Invalid transport type specified");
   }
 };
 
-export async function connectServer(serverId: string) {
-  console.log("Connecting to server:", serverId);
-  const serverEntity = await getServerEntityById(serverId);
-  if (!serverEntity) {
-    throw new Error(`Server with ID ${serverId} not found`);
+export async function connectServer(serverName: string) {
+  logger.info(`Connecting to server: ${serverName}`);
+
+  // Get server config from the unified configuration
+  const config = getCurrentConfig();
+  const serverConfig = config.servers[serverName];
+
+  if (!serverConfig) {
+    throw new Error(`Server "${serverName}" not found in configuration`);
   }
+
+  // We only support remote servers for direct connections
+  if (!isRemoteServer(serverConfig)) {
+    throw new Error(
+      `Server "${serverName}" is not a remote server and cannot be connected to directly`
+    );
+  }
+
   try {
     const backingServerTransport = createTransport({
       transportType: "sse",
-      url: serverEntity.url,
-      headers: Object.fromEntries(
-        serverEntity.headers.map(
-          ({ name, value }: { name: string; value: string }) => [name, value]
-        )
-      ),
+      url: serverConfig.url,
+      headers: serverConfig.headers || {},
     });
+
     const client = new Client(
       {
         name: "abc-inspector",
@@ -64,32 +73,31 @@ export async function connectServer(serverId: string) {
       },
       {}
     );
+
     await client.connect(backingServerTransport);
-    console.log("Connected to server:", serverId);
+    logger.info(`Connected to server: ${serverName}`);
+
     const { tools } = await client.listTools();
-    console.log("Tools:", tools);
-    await entityModel.update("server", serverId, {
-      status: "active",
-      error: null,
-      tools,
-      lastConnected: new Date().toISOString(),
-    });
+    logger.info(`Tools discovered from ${serverName}:`, tools);
+
     await client.close();
-    console.log("Closed connection to server:", serverId);
+    logger.info(`Closed connection to server: ${serverName}`);
+
     return tools;
   } catch (error) {
     let errorMessage =
       error instanceof Error ? error.message : "Unknown Connection Error";
+
     if (error instanceof SseError && error.code === 401) {
       errorMessage =
         "Received 401 Unauthorized from MCP server: " + error.message;
     }
-    console.error("Error connecting to server:", errorMessage, error);
-    await entityModel.update("server", serverId, {
-      status: "error",
-      error: errorMessage,
-      tools: [],
-    });
+
+    logger.error(
+      `Error connecting to server ${serverName}:`,
+      errorMessage,
+      error
+    );
     throw error;
   }
 }
@@ -99,9 +107,15 @@ export const sseServerActions = {
     if (!serverId) {
       throw new Error("Server ID is required");
     }
-    console.log("Connecting to server with ID:", serverId);
+    logger.info(`Connecting to server: ${serverId}`);
     await connectServer(serverId);
+    // Return void to match the type definition
   },
 };
 
-export type SseServerActions = RpcService<typeof sseServerActions, void>;
+export type SseServerActions = RpcService<
+  {
+    connectServer(serverId: string): Promise<void>;
+  },
+  void
+>;

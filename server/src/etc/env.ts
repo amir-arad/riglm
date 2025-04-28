@@ -22,6 +22,16 @@ export const env = {
    * SQLite database path
    * Only used when type is 'sqlite'
    */
+  /**
+   * MVP configuration file path
+   */
+  mvpConfigPath:
+    process.env.MVP_CONFIG_PATH || path.join(process.cwd(), "config.json"),
+
+  /**
+   * SQLite database path
+   * Only used when type is 'sqlite'
+   */
   sqlitePath:
     process.env.SQLITE_DB_PATH ||
     path.join(process.cwd(), "data", "database.sqlite"),

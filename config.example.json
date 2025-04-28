@@ -1,0 +1,42 @@
+{
+  "servers": {
+    "local_server": {
+      "command": "node",
+      "args": ["./script/mcp-server.js"],
+      "env": {
+        "PORT": "8080"
+      },
+      "description": "Local MCP Server implementation"
+    },
+    "remote_server": {
+      "url": "https://example.com/mcp-server",
+      "headers": {
+        "Authorization": "Bearer your-api-key-here",
+        "Content-Type": "application/json"
+      },
+      "description": "Remote MCP Server example"
+    }
+  },
+  "contexts": {
+    "code_assistant": {
+      "description": "Context for coding tasks",
+      "guidelines": "Focus on code generation and analysis.",
+      "servers": ["local_server", "remote_server"]
+    },
+    "data_analysis": {
+      "description": "Context for data processing and visualization",
+      "servers": ["remote_server"]
+    }
+  },
+  "endpoints": {
+    "main_api": {
+      "description": "Primary access endpoint",
+      "contexts": ["code_assistant", "data_analysis"]
+    },
+    "dev_testing": {
+      "description": "Development environment endpoint",
+      "contexts": ["code_assistant"],
+      "apiKey": "dev-secret-key-123"
+    }
+  }
+}

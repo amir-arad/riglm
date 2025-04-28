@@ -3,8 +3,7 @@ import express, { Router, json } from "express";
 import helmet from "helmet";
 import morgan from "morgan";
 import { handleRpc } from "typed-rpc/server";
-import { entitiesRoutes } from "./entities/entity.controller";
-import { close, init } from "./entities/entity.model";
+import { loadConfig, reloadConfig } from "./config";
 import { env } from "./etc/env";
 import { errorHandler, notFoundHandler } from "./etc/error.middleware";
 import { logger, morganStream } from "./etc/logger";
@@ -23,7 +22,14 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("combined", { stream: morganStream }));
 app.use(express.static(env.clientBuildPath));
-app.use("/api/apps", entitiesRoutes);
+// Load the configuration file
+try {
+  loadConfig();
+} catch (error) {
+  logger.error("Failed to load configuration. Exiting.");
+  process.exit(1);
+}
+
 app.use(endpointsRoutes);
 
 export const rpcRoutes = Router();
@@ -39,7 +45,7 @@ app.use("/rpc", rpcRoutes);
 app.use(notFoundHandler);
 // Handle errors
 app.use(errorHandler);
-init();
+
 const httpServer = app.listen(env.port, "0.0.0.0", () => {
   logger.info(`Server running on http://localhost:${env.port}`);
 });
@@ -53,6 +59,14 @@ process.on("SIGTERM", async () => {
   cleanup(0);
 });
 
+// Add SIGHUP handler for configuration reloading
+process.on("SIGHUP", () => {
+  logger.info("Received SIGHUP signal, reloading configuration...");
+  if (reloadConfig()) {
+    logger.info("Configuration reloaded successfully");
+  }
+});
+
 process.on("unhandledRejection", (error) => {
   logger.error("Unhandled rejection", { error });
   cleanup(1);
@@ -64,7 +78,6 @@ process.on("uncaughtException", (error) => {
 });
 
 async function cleanup(errorCode = 0) {
-  close();
   await new Promise((resolve) => {
     httpServer.close(() => {
       logger.info("HTTP server closed");

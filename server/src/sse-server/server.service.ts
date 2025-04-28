@@ -1,12 +1,10 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-
-import { getServerEntityById } from "../entities/server";
-
+import { spawn, ChildProcess } from "child_process";
 import {
   SSEClientTransport,
   SseError,
 } from "@modelcontextprotocol/sdk/client/sse.js";
-import * as entityModel from "../entities/entity.model";
+import { getCurrentConfig, isLocalServer, isRemoteServer } from "../config";
 import { logger } from "../etc/logger";
 import { makeServicesContainer } from "../etc/service";
 
@@ -18,19 +16,34 @@ import { makeServicesContainer } from "../etc/service";
 export const sessionServerConnections = (sessionId: string) =>
   makeServicesContainer(makeServerConnection(sessionId));
 
+// Map to keep track of local server processes
+const localServerProcesses = new Map<string, ChildProcess>();
+
 const makeServerConnection =
-  (sessionId: string) => async (serverId: string) => {
-    const serverEntity = await getServerEntityById(serverId);
-    if (!serverEntity) {
-      throw new Error(`Server with ID ${serverId} not found`);
+  (sessionId: string) => async (serverName: string) => {
+    const config = getCurrentConfig();
+    const serverConfig = config.servers[serverName];
+
+    if (!serverConfig) {
+      throw new Error(`Server "${serverName}" not found in configuration`);
     }
-    const transport = createTransport({
-      transportType: "sse",
-      url: serverEntity.url,
-      headers: Object.fromEntries(
-        serverEntity.headers.map(({ name, value }) => [name, value])
-      ),
-    });
+
+    let transport;
+
+    if (isLocalServer(serverConfig)) {
+      // Handle local server
+      transport = await setupLocalServer(serverName, serverConfig);
+    } else if (isRemoteServer(serverConfig)) {
+      // Handle remote server
+      transport = createTransport({
+        transportType: "sse",
+        url: serverConfig.url,
+        headers: serverConfig.headers || {},
+      });
+    } else {
+      throw new Error(`Invalid server configuration for "${serverName}"`);
+    }
+
     const client = new Client(
       {
         name: "abc-bridge-" + sessionId,
@@ -38,30 +51,46 @@ const makeServerConnection =
       },
       {}
     );
+
     try {
       await client.connect(transport);
-      logger.info("Connected to server:", serverId, "sessionId:", sessionId);
+      logger.info(
+        `Connected to server: ${serverName}, sessionId: ${sessionId}`
+      );
       const { tools } = await client.listTools();
-      logger.info("Tools:", tools);
-      await entityModel.update("server", serverId, {
-        status: "active",
-        error: null,
-        tools,
-        lastConnected: new Date().toISOString(),
-      });
+      logger.info(`Discovered tools from ${serverName}:`, tools);
+
       return {
-        serverId,
-        serverEntity,
+        serverName,
+        serverConfig,
         client,
         tools,
         close: async () => {
           await client.close();
           logger.info(
-            "Closed connection to server:",
-            serverId,
-            "sessionId:",
-            sessionId
+            `Closed connection to server: ${serverName}, sessionId: ${sessionId}`
           );
+
+          // Clean up local server if needed
+          if (
+            isLocalServer(serverConfig) &&
+            localServerProcesses.has(serverName)
+          ) {
+            const serverProcess = localServerProcesses.get(serverName);
+            if (serverProcess) {
+              try {
+                serverProcess.kill();
+                logger.info(
+                  `Terminated local server process for ${serverName}`
+                );
+              } catch (error) {
+                logger.error(
+                  `Error terminating local server process for ${serverName}:`,
+                  error
+                );
+              }
+            }
+          }
         },
       };
     } catch (error) {
@@ -71,15 +100,82 @@ const makeServerConnection =
         errorMessage =
           "Received 401 Unauthorized from MCP server: " + error.message;
       }
-      logger.error("Error connecting to server:", errorMessage, error);
-      await entityModel.update("server", serverId, {
-        status: "error",
-        error: errorMessage,
-        tools: [],
-      });
+      logger.error(
+        `Error connecting to server ${serverName}:`,
+        errorMessage,
+        error
+      );
       throw error;
     }
   };
+
+/**
+ * Set up a local server by spawning a process based on the configuration.
+ * Returns a transport connected to the local server.
+ */
+async function setupLocalServer(
+  serverName: string,
+  config: { command: string; args: string[]; env?: Record<string, string> }
+) {
+  logger.info(
+    `Setting up local server "${serverName}" with command: ${config.command} ${config.args.join(" ")}`
+  );
+
+  // Check if this server is already running
+  if (localServerProcesses.has(serverName)) {
+    const existingProcess = localServerProcesses.get(serverName);
+    if (existingProcess && !existingProcess.killed) {
+      logger.info(`Local server "${serverName}" is already running`);
+      // TODO: Return transport connected to existing server
+      // For now, we'll assume the server is running on localhost:8080
+      // This needs to be configured properly
+      return createTransport({
+        transportType: "sse",
+        url: "http://localhost:8080",
+        headers: {},
+      });
+    }
+  }
+
+  // Start a new process
+  const serverProcess = spawn(config.command, config.args, {
+    env: { ...process.env, ...config.env },
+  });
+
+  // Store the process
+  localServerProcesses.set(serverName, serverProcess);
+
+  // Log output
+  serverProcess.stdout.on("data", (data: Buffer) => {
+    logger.info(`[${serverName}] ${data.toString().trim()}`);
+  });
+
+  serverProcess.stderr.on("data", (data: Buffer) => {
+    logger.error(`[${serverName}] ${data.toString().trim()}`);
+  });
+
+  serverProcess.on("error", (error: Error) => {
+    logger.error(`Error in local server "${serverName}":`, error);
+  });
+
+  serverProcess.on("exit", (code: number | null, signal: string | null) => {
+    logger.info(
+      `Local server "${serverName}" exited with code ${code} (signal: ${signal})`
+    );
+    localServerProcesses.delete(serverName);
+  });
+
+  // TODO: We need a way to determine when the server is ready and what URL to connect to
+  // For now, we'll just wait a bit and assume it's on localhost:8080
+  // This needs to be configured properly in a real implementation
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  return createTransport({
+    transportType: "sse",
+    url: "http://localhost:8080",
+    headers: {},
+  });
+}
 
 type TransportOptions = {
   transportType: "sse";
