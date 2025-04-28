@@ -4,7 +4,7 @@ export type EndpointEntity = entityModel.IEntity & {
   name: string;
   description: string;
   contextIds: string[];
-  status: "active" | "draft" | "testing" | "deprecated";
+  status: "active" | "draft" | "deprecated";
   url: string;
   apiKey: string;
   usage: { connections: number; requests: number };

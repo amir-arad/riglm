@@ -1,5 +1,6 @@
 {
     "name": "client",
+    "description": "https://app.base44.com/apps/67f92d8d8df675b48c5f25b2",
     "private": true,
     "version": "0.0.1",
     "type": "module",

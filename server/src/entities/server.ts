@@ -22,7 +22,7 @@ export type ServerEntity = entityModel.IEntity & {
     name: string;
     value: string;
   }>;
-  status: "active" | "draft" | "testing" | "deprecated";
+  status: "active" | "draft" | "deprecated";
   error: string | null;
   lastConnected: string | Date;
   tools: Array<ToolDefinition>;

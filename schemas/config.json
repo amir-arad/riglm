@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://abc.arad.link/mvp-config.schema.json",
+  "title": "ABC Application Configuration",
+  "description": "Unified configuration for MCP Servers, Contexts, and Endpoints for ABC.",
+  "type": "object",
+  "properties": {
+    "servers": {
+      "description": "Configuration for connecting to MCP servers.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/serverIdentifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/server"
+      }
+    },
+    "contexts": {
+      "description": "Definitions of execution contexts, grouping servers and providing guidelines.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/contextIdentifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/context"
+      }
+    },
+    "endpoints": {
+      "description": "Definitions of access endpoints exposing specific contexts.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/endpointIdentifier"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/endpoint"
+      }
+    }
+  },
+  "required": ["servers", "contexts", "endpoints"],
+  "additionalProperties": false,
+
+  "$defs": {
+    "serverIdentifier": {
+      "description": "A valid server name/key used in the 'servers' section.",
+      "type": "string",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+    },
+    "contextIdentifier": {
+      "description": "A valid context name/key used in the 'contexts' section.",
+      "type": "string",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+    },
+    "endpointIdentifier": {
+      "description": "A valid endpoint name/key used in the 'endpoints' section.",
+      "type": "string",
+      "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+    },
+
+    "server": {
+      "description": "Configuration for a single MCP server (local or remote).",
+      "oneOf": [
+        { "$ref": "#/$defs/localServer" },
+        { "$ref": "#/$defs/remoteServer" }
+      ]
+    },
+    "localServer": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "description": "The command to execute to start the server.",
+          "type": "string"
+        },
+        "args": {
+          "description": "Arguments for the command.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "env": {
+          "description": "Environment variables for the server process.",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "description": {
+          "description": "Optional description of the server.",
+          "type": "string"
+        }
+      },
+      "required": ["command", "args"],
+      "additionalProperties": false
+    },
+    "remoteServer": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "The URL to connect to the remote server.",
+          "type": "string",
+          "format": "uri"
+        },
+        "headers": {
+          "description": "HTTP headers to include in requests (e.g., for authentication).",
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "description": {
+          "description": "Optional description of the server.",
+          "type": "string"
+        }
+      },
+      "required": ["url"],
+      "additionalProperties": false
+    },
+
+    "context": {
+      "description": "Definition of an execution context.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "description": "Optional description of the context's purpose.",
+          "type": "string"
+        },
+        "guidelines": {
+          "description": "Optional usage guidelines or instructions.",
+          "type": "string"
+        },
+        "servers": {
+          "description": "List of server names (keys from the 'servers' section) providing tools for this context.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/serverIdentifier" },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": ["servers"],
+      "additionalProperties": false
+    },
+
+    "endpoint": {
+      "description": "Definition of an access endpoint.",
+      "type": "object",
+      "properties": {
+        "description": {
+          "description": "Optional description of the endpoint's purpose.",
+          "type": "string"
+        },
+        "contexts": {
+          "description": "List of context names (keys from the 'contexts' section) exposed by this endpoint.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/contextIdentifier" },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "apiKey": {
+          "description": "Optional API key required specifically for this endpoint.",
+          "type": "string"
+        }
+      },
+      "required": ["contexts"],
+      "additionalProperties": false
+    }
+  }
+}

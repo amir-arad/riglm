@@ -404,36 +404,6 @@ export default function ContextsPage() {
                                             : 'Unknown'}
                                     </div>
                                 </div>
-                                {context.parentContexts &&
-                                    context.parentContexts.length > 0 && (
-                                        <div className="pt-2 border-t">
-                                            <p className="text-sm text-muted-foreground mb-1">
-                                                Parent Contexts:
-                                            </p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {context.parentContexts.map(
-                                                    (parentId) => {
-                                                        const parent =
-                                                            contexts.find(
-                                                                (c) =>
-                                                                    c.id ===
-                                                                    parentId
-                                                            );
-                                                        return (
-                                                            <Badge
-                                                                key={parentId}
-                                                                variant="secondary"
-                                                                className="text-xs"
-                                                            >
-                                                                {parent?.name ||
-                                                                    'Unknown'}
-                                                            </Badge>
-                                                        );
-                                                    }
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
                             </CardContent>
                             <CardFooter>
                                 <Button

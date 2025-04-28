@@ -123,3 +123,9 @@ server/
 ├── tsconfig.json             # TypeScript configuration
 └── README.md                 # Documentation
 ```
+
+## Documentation
+
+The following documentation files are available:
+
+- [Entity Schemas](./ENTITY-SCHEMAS.md) - Detailed schema documentation for Context, Endpoint, and Server entities

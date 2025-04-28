@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "name": "Endpoint",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "User-friendly name"
+    },
+    "url": {
+      "type": "string",
+      "description": "URL-friendly identifier (no spaces or special characters)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Purpose description"
+    },
+    "apiKey": {
+      "type": "string",
+      "description": "API key for authentication"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "deprecated"],
+      "default": "draft",
+      "description": "Context status"
+    },
+    "contextIds": {
+      "type": "array",
+      "description": "Associated context IDs",
+      "items": {
+        "type": "string"
+      }
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "connections": {
+          "type": "number",
+          "description": "Count of client connections",
+          "default": 0
+        },
+        "requests": {
+          "type": "number",
+          "description": "Count of processed requests",
+          "default": 0
+        },
+        "lastUsed": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last activity timestamp"
+        }
+      }
+    }
+  },
+  "required": ["name", "url"]
+}

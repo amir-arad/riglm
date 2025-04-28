@@ -44,7 +44,6 @@ export default function ContextForm({
         status: context?.status || 'draft',
         guidelines: context?.guidelines || '',
         tools: context?.tools || [],
-        parentContexts: context?.parentContexts || [],
     });
 
     const [errors, setErrors] = useState({});

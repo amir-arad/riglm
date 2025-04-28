@@ -4,7 +4,7 @@ export type ContextEntity = entityModel.IEntity & {
   name: string;
   description: string;
   version: string;
-  status: "active" | "draft" | "testing" | "deprecated";
+  status: "active" | "draft" | "deprecated";
   guidelines: string;
   tools: Array<{
     serverId: string;
@@ -14,7 +14,6 @@ export type ContextEntity = entityModel.IEntity & {
     inputSchema: Record<string, any>;
     configuration: Record<string, any>;
   }>;
-  parentContexts: string[];
 };
 
 export function isContextEntity(
@@ -35,9 +34,7 @@ export function isContextEntity(
         typeof tool.description === "string" &&
         typeof tool.inputSchema === "object" &&
         typeof tool.configuration === "object"
-    ) &&
-    Array.isArray(entity.parentContexts) &&
-    entity.parentContexts.every((contextId) => typeof contextId === "string")
+    )
   );
 }
 
