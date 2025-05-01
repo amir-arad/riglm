@@ -9,27 +9,34 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ServerResponse } from "http";
 import { JSONSchema7 } from "json-schema";
-import { getCurrentConfig } from "../config";
 import { logger } from "../etc/logger";
 import { makeServicesContainer } from "../etc/service";
-import { sessionServerConnections } from "../sse-server/server.service";
+import { ServerConfigurator } from "../server";
+import { SessionBackends } from "../backend.service";
 import { TransportSessionManager } from "./transport-session-manager";
-import { ToolDefinition, ToolHandler } from "./types";
+import { ToolDefinition, ToolHandler } from "../etc/mcp-schema";
 
-export const endpointServices = makeServicesContainer(makeEndpointService);
+export const makeHostsServiceFactory = (
+  sessionBackends: SessionBackends,
+  configManager: ServerConfigurator
+) =>
+  makeServicesContainer(
+    (name) => makeHostsService(name, sessionBackends, configManager),
+    `HostsService`
+  );
 
-async function makeEndpointService(name: string) {
+async function makeHostsService(
+  name: string,
+  sessionBackends: SessionBackends,
+  configManager: ServerConfigurator
+) {
   type ToolEntry = [ToolDefinition, ToolHandler];
 
-  // Check if endpoint exists in config
-  const config = getCurrentConfig();
-  const endpoint = config.endpoints[name];
-
+  const endpoint = configManager.get().endpoints[name];
   if (!endpoint) {
     throw new Error(`Endpoint "${name}" not found in configuration`);
   }
 
-  // Create MCP server
   const mcpServer = new Server(
     {
       name,
@@ -45,18 +52,13 @@ async function makeEndpointService(name: string) {
     }
   );
 
-  const tsm = new TransportSessionManager(mcpServer, {
-    inactivityThreshold: 30 * 60 * 1000,
-    cleanupInterval: 5 * 60 * 1000,
-  });
-
-  // Create app sessions container
-  const appSessions = makeServicesContainer(async (sessionId: string) => {
-    const proxyConnections = sessionServerConnections(sessionId);
+  const tsm = new TransportSessionManager(mcpServer);
+  const makeHostSession = async (sessionId: string) => {
+    const serversConnections = sessionBackends(sessionId);
 
     // Get contexts from config
     const contexts = endpoint.contexts.map((contextName) => {
-      const context = config.contexts[contextName];
+      const context = configManager.get().contexts[contextName];
       if (!context) {
         throw new Error(`Context "${contextName}" not found in configuration`);
       }
@@ -75,7 +77,7 @@ async function makeEndpointService(name: string) {
     const proxyTargets = new Map(
       (
         await Promise.all(
-          serverNames.map((serverName) => proxyConnections.get(serverName))
+          serverNames.map((serverName) => serversConnections.get(serverName))
         )
       ).map((server) => [server.serverName, server])
     );
@@ -120,33 +122,26 @@ async function makeEndpointService(name: string) {
       toolHandlers: new Map(
         toolEntries.map(([tool, handler]) => [tool.name, handler])
       ),
-      proxyConnections,
+      serversConnections,
       close: async () => {
         logger.info("Closing app session");
       },
     };
-  });
+  };
+  const hostSessions = makeServicesContainer(makeHostSession, `HostSession`);
 
-  // Session initialization
   async function initSession(endpoint: string, res: ServerResponse) {
-    // Check for API key if configured
-    if (config.endpoints[endpoint]?.apiKey) {
-      // API key validation would happen here
-      // Not implemented in this basic version
-    }
-
     const transportSession = await tsm.createSession(endpoint, res);
     const { sessionId } = transportSession;
-    const appSession = await appSessions.get(sessionId);
+    const appSession = await hostSessions.get(sessionId);
     transportSession.addService(
-      "proxyConnections",
-      appSession.proxyConnections
+      "serversConnections",
+      appSession.serversConnections
     );
     transportSession.addService("appSession", appSession);
     return sessionId;
   }
 
-  // Set up request handlers
   mcpServer.setRequestHandler(
     ListToolsRequestSchema,
     async (_, { signal, sessionId }) => {
@@ -154,7 +149,7 @@ async function makeEndpointService(name: string) {
       if (!sessionId) {
         throw new McpError(ErrorCode.InvalidRequest, "Session ID is required");
       }
-      const appSession = await appSessions.get(sessionId);
+      const appSession = await hostSessions.get(sessionId);
       return { tools: appSession.tools };
     }
   );
@@ -166,7 +161,7 @@ async function makeEndpointService(name: string) {
       if (!sessionId) {
         throw new McpError(ErrorCode.InvalidRequest, "Session ID is required");
       }
-      const appSession = await appSessions.get(sessionId);
+      const appSession = await hostSessions.get(sessionId);
       const handler = appSession.toolHandlers.get(request.params.name);
       if (!handler) {
         throw new McpError(
@@ -197,7 +192,7 @@ async function makeEndpointService(name: string) {
   };
 }
 
-export type EndpointService = Awaited<ReturnType<typeof makeEndpointService>>;
+export type HostsService = Awaited<ReturnType<typeof makeHostsService>>;
 
 function checkSignal(signal: AbortSignal) {
   if (signal.aborted) {

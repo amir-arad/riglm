@@ -1,27 +1,30 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { spawn, ChildProcess } from "child_process";
 import {
   SSEClientTransport,
   SseError,
 } from "@modelcontextprotocol/sdk/client/sse.js";
-import { getCurrentConfig, isLocalServer, isRemoteServer } from "../config";
-import { logger } from "../etc/logger";
-import { makeServicesContainer } from "../etc/service";
+import { ChildProcess, spawn } from "child_process";
+import { isLocalServer, isRemoteServer, Server } from "./etc/config-schema";
+import { logger } from "./etc/logger";
+import { makeServicesContainer, Services } from "./etc/service";
+import { ServerConfigurator } from "./server";
+import { type RpcService } from "typed-rpc/server";
 
-/**
- * Creates a service container for managing server connections.
- * @param sessionId - The session ID for the connection
- * @returns A service container for managing server connections for this session
- */
-export const sessionServerConnections = (sessionId: string) =>
-  makeServicesContainer(makeServerConnection(sessionId));
+export const makeSessionBackendFactory =
+  (configManager: ServerConfigurator) => (sessionId: string) =>
+    makeServicesContainer(
+      makeBackend(sessionId, configManager, new Map<string, ChildProcess>()),
+      `Backend(${sessionId})`
+    );
 
-// Map to keep track of local server processes
-const localServerProcesses = new Map<string, ChildProcess>();
-
-const makeServerConnection =
-  (sessionId: string) => async (serverName: string) => {
-    const config = getCurrentConfig();
+const makeBackend =
+  (
+    sessionId: string,
+    configManager: ServerConfigurator,
+    localServerProcesses: Map<string, ChildProcess>
+  ) =>
+  async (serverName: string) => {
+    const config = configManager.get();
     const serverConfig = config.servers[serverName];
 
     if (!serverConfig) {
@@ -31,10 +34,12 @@ const makeServerConnection =
     let transport;
 
     if (isLocalServer(serverConfig)) {
-      // Handle local server
-      transport = await setupLocalServer(serverName, serverConfig);
+      transport = await setupLocalServer(
+        serverName,
+        serverConfig,
+        localServerProcesses
+      );
     } else if (isRemoteServer(serverConfig)) {
-      // Handle remote server
       transport = createTransport({
         transportType: "sse",
         url: serverConfig.url,
@@ -53,6 +58,9 @@ const makeServerConnection =
     );
 
     try {
+      logger.info(
+        `Connecting to server: ${serverName}, sessionId: ${sessionId}`
+      );
       await client.connect(transport);
       logger.info(
         `Connected to server: ${serverName}, sessionId: ${sessionId}`
@@ -66,11 +74,17 @@ const makeServerConnection =
         client,
         tools,
         close: async () => {
-          await client.close();
-          logger.info(
-            `Closed connection to server: ${serverName}, sessionId: ${sessionId}`
-          );
-
+          try {
+            await client.close();
+            logger.info(
+              `Closed connection to server: ${serverName}, sessionId: ${sessionId}`
+            );
+          } catch (error) {
+            logger.error(
+              `Error closing connection to server ${serverName}:`,
+              error
+            );
+          }
           // Clean up local server if needed
           if (
             isLocalServer(serverConfig) &&
@@ -108,20 +122,17 @@ const makeServerConnection =
       throw error;
     }
   };
-
-/**
- * Set up a local server by spawning a process based on the configuration.
- * Returns a transport connected to the local server.
- */
+export type Backend = Awaited<ReturnType<ReturnType<typeof makeBackend>>>;
+export type SessionBackends = (sessionId: string) => Services<Backend>;
 async function setupLocalServer(
   serverName: string,
-  config: { command: string; args: string[]; env?: Record<string, string> }
+  config: { command: string; args: string[]; env?: Record<string, string> },
+  localServerProcesses: Map<string, ChildProcess>
 ) {
   logger.info(
     `Setting up local server "${serverName}" with command: ${config.command} ${config.args.join(" ")}`
   );
 
-  // Check if this server is already running
   if (localServerProcesses.has(serverName)) {
     const existingProcess = localServerProcesses.get(serverName);
     if (existingProcess && !existingProcess.killed) {
@@ -137,15 +148,12 @@ async function setupLocalServer(
     }
   }
 
-  // Start a new process
   const serverProcess = spawn(config.command, config.args, {
     env: { ...process.env, ...config.env },
   });
 
-  // Store the process
   localServerProcesses.set(serverName, serverProcess);
 
-  // Log output
   serverProcess.stdout.on("data", (data: Buffer) => {
     logger.info(`[${serverName}] ${data.toString().trim()}`);
   });
@@ -210,3 +218,79 @@ function createTransport(options: TransportOptions) {
     throw new Error("Invalid transport type specified");
   }
 }
+
+async function connectServerImpl(serverName: string, serverConfig: Server) {
+  logger.info(`Connecting to server: ${serverName}`);
+
+  // We only support remote servers for direct connections
+  if (!isRemoteServer(serverConfig)) {
+    throw new Error(
+      `Server "${serverName}" is not a remote server and cannot be connected to directly`
+    );
+  }
+
+  try {
+    const backingServerTransport = createTransport({
+      transportType: "sse",
+      url: serverConfig.url,
+      headers: serverConfig.headers || {},
+    });
+
+    const client = new Client(
+      {
+        name: "abc-inspector",
+        version: "0.0.1",
+      },
+      {}
+    );
+
+    await client.connect(backingServerTransport);
+    logger.info(`Connected to server: ${serverName}`);
+
+    const { tools } = await client.listTools();
+    logger.info(`Tools discovered from ${serverName}:`, tools);
+
+    await client.close();
+    logger.info(`Closed connection to server: ${serverName}`);
+
+    return tools;
+  } catch (error) {
+    let errorMessage =
+      error instanceof Error ? error.message : "Unknown Connection Error";
+
+    if (error instanceof SseError && error.code === 401) {
+      errorMessage =
+        "Received 401 Unauthorized from MCP server: " + error.message;
+    }
+
+    logger.error(
+      `Error connecting to server ${serverName}:`,
+      errorMessage,
+      error
+    );
+    throw error;
+  }
+}
+
+export const sseServerActions = (config: ServerConfigurator) => ({
+  async connectServer(serverName: string) {
+    if (!serverName) {
+      throw new Error("Server name is required");
+    }
+    const serverConfig = config.get().servers[serverName];
+
+    if (!serverConfig) {
+      throw new Error(`Server "${serverName}" not found in configuration`);
+    }
+    logger.info(`Connecting to server: ${serverName}`);
+    await connectServerImpl(serverName, serverConfig);
+    logger.info(`Connected to server: ${serverName}`);
+  },
+});
+
+export type SseServerActions = RpcService<
+  {
+    connectServer(serverId: string): Promise<void>;
+  },
+  void
+>;

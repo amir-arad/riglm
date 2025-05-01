@@ -1,92 +1,41 @@
-import cors from "cors";
-import express, { Router, json } from "express";
-import helmet from "helmet";
-import morgan from "morgan";
-import { handleRpc } from "typed-rpc/server";
-import { loadConfig, reloadConfig } from "./config";
+import { ConfigManager } from "./config-manager";
 import { env } from "./etc/env";
-import { errorHandler, notFoundHandler } from "./etc/error.middleware";
-import { logger, morganStream } from "./etc/logger";
-import { endpointsRoutes } from "./sse-endpoint/controller";
-import { endpointServices } from "./sse-endpoint/endpoint.service";
-import { SseServerActions, sseServerActions } from "./sse-server";
+import { logger } from "./etc/logger";
+import { AbcServer } from "./server";
 
-const app = express();
-app.use(helmet());
-app.use(
-  cors({
-    origin: env.cors.origin,
-    credentials: true,
-  })
-);
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan("combined", { stream: morganStream }));
-app.use(express.static(env.clientBuildPath));
-// Load the configuration file
 try {
-  loadConfig();
+  const config = new ConfigManager(env.configPath);
+  config.load();
+  const server = new AbcServer(config);
+  server.start().catch((error) => {
+    logger.error("Failed to start server", { error });
+    close(1);
+  });
+
+  process.on("SIGINT", async () => {
+    logger.info("Received SIGINT signal, cleaning up...");
+    server.close().then(() => close(0));
+  });
+  process.on("SIGTERM", async () => {
+    logger.info("Received SIGTERM signal, cleaning up...");
+    server.close().then(() => close(0));
+  });
+  process.on("unhandledRejection", (error) => {
+    logger.error("Unhandled rejection", { error });
+    server.close().then(() => close(1));
+  });
+  process.on("uncaughtException", (error) => {
+    logger.error("Uncaught exception", { error });
+    server.close().then(() => close(1));
+  });
+
+  async function close(errorCode = 0) {
+    if (errorCode) {
+      logger.error("Server exited with error code", { errorCode });
+    }
+    process.exit(errorCode);
+  }
 } catch (error) {
   logger.error("Failed to load configuration. Exiting.");
   process.exit(1);
-}
-
-app.use(endpointsRoutes);
-
-export const rpcRoutes = Router();
-rpcRoutes.use(json());
-rpcRoutes.post("/", (req, res, next) => {
-  handleRpc<SseServerActions>(req.body, sseServerActions)
-    .then((result) => res.json(result))
-    .catch(next);
-});
-
-app.use("/rpc", rpcRoutes);
-// Handle 404 errors
-app.use(notFoundHandler);
-// Handle errors
-app.use(errorHandler);
-
-const httpServer = app.listen(env.port, "0.0.0.0", () => {
-  logger.info(`Server running on http://localhost:${env.port}`);
-});
-
-process.on("SIGINT", async () => {
-  logger.info("Received SIGINT signal, cleaning up...");
-  cleanup(0);
-});
-process.on("SIGTERM", async () => {
-  logger.info("Received SIGTERM signal, cleaning up...");
-  cleanup(0);
-});
-
-// Add SIGHUP handler for configuration reloading
-process.on("SIGHUP", () => {
-  logger.info("Received SIGHUP signal, reloading configuration...");
-  if (reloadConfig()) {
-    logger.info("Configuration reloaded successfully");
-  }
-});
-
-process.on("unhandledRejection", (error) => {
-  logger.error("Unhandled rejection", { error });
-  cleanup(1);
-});
-
-process.on("uncaughtException", (error) => {
-  logger.error("Uncaught exception", { error });
-  cleanup(1);
-});
-
-async function cleanup(errorCode = 0) {
-  await new Promise((resolve) => {
-    httpServer.close(() => {
-      logger.info("HTTP server closed");
-      resolve(true);
-    });
-  });
-  await endpointServices.close();
-  if (errorCode) {
-    logger.error("Server exited with error code", { errorCode });
-  }
-  process.exit(errorCode);
 }

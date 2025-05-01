@@ -27,25 +27,27 @@ export function closeServices(
 }
 
 export function makeServicesContainer<T extends Service>(
-  factory: (id: string) => Promise<T>
+  factory: (id: string) => Promise<T>,
+  serviceName: string
 ) {
   const services = new Map<string, Promise<T>>();
   return {
     get: (id: string) => {
       if (!services.has(id)) {
         const sp = factory(id).then((s) => {
+          const orig_close = s.close;
           s.close = () => {
             if (services.get(id) === sp) {
               services.delete(id);
             }
-            return s.close();
+            return orig_close();
           };
-          logger.info(`Endpoint service created: ${id}`);
+          logger.info(`${serviceName} service created: ${id}`);
           return s;
         });
         services.set(id, sp);
         sp.catch((error) => {
-          logger.error(`Error creating endpoint service: ${id}`, error);
+          logger.error(`Error creating ${serviceName} service: ${id}`, error);
           services.delete(id);
         });
       }

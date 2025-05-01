@@ -25,7 +25,7 @@ export const env = {
   /**
    * MVP configuration file path
    */
-  mvpConfigPath:
+  configPath:
     process.env.MVP_CONFIG_PATH || path.join(process.cwd(), "config.json"),
 
   /**
