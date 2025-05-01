@@ -1,12 +1,13 @@
 import { ConfigManager } from "./config-manager";
 import { env } from "./etc/env";
-import { logger } from "./etc/logger";
+import { makeDefaultLogger } from "./etc/logger";
 import { AbcServer } from "./server";
 
+const config = new ConfigManager(env.configPath);
+const logger = makeDefaultLogger(env);
 try {
-  const config = new ConfigManager(env.configPath);
   config.load();
-  const server = new AbcServer(config);
+  const server = new AbcServer({ config, env, logger });
   server.start().catch((error) => {
     logger.error("Failed to start server", { error });
     close(1);

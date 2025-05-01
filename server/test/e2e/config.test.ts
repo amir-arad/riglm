@@ -2,29 +2,49 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { expect } from "chai";
 import { Config } from "../../src/etc/config-schema";
-import { AbcServer } from "../../src/server";
+import { AbcServer, ServerOptons } from "../../src/server";
 import { mockMcpBackend } from "../fixtures/mock-mcp-backend";
+import winston from "winston";
 
 describe("Configuration E2E Test", () => {
   let mockBackend: ReturnType<typeof mockMcpBackend> | null = null;
   let client: Client | null = null;
   let uut: AbcServer | null = null;
   let currentConfig: Config | null = null;
-
-  beforeEach(async () => {
-    mockBackend = mockMcpBackend();
-    client = new Client({
-      name: "test-client",
-      version: "1.0.0",
-    });
-    uut = new AbcServer({
+  const mockOptions = {
+    env: {
+      port: 56667,
+      isProduction: false,
+    },
+    config: {
       get: () => {
         if (!currentConfig) {
           throw new Error("No config loaded");
         }
         return currentConfig;
       },
+    },
+    logger: winston.createLogger({
+      level: "info",
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.label({ label: "abc-server", message: true }),
+        winston.format.simple()
+      ),
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.simple(),
+        }),
+      ],
+    }),
+  } satisfies ServerOptons;
+  beforeEach(async () => {
+    mockBackend = mockMcpBackend();
+    client = new Client({
+      name: "test-client",
+      version: "1.0.0",
     });
+    uut = new AbcServer(mockOptions);
   });
 
   afterEach(async () => {

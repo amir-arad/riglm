@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "https://json-schema.org/draft-07/schema",
   "$id": "https://abc.arad.link/mvp-config.schema.json",
   "title": "ABC Application Configuration",
   "description": "Unified configuration for MCP Servers, Contexts, and Endpoints for ABC.",
@@ -7,7 +7,7 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "format": "uri-reference",
+      "format": "uri",
       "description": "The schema reference URI (can be a relative path)"
     },
     "servers": {

@@ -39,3 +39,4 @@ tmp/
 temp/
 
 data/
+config.local.json*

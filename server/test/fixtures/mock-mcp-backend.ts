@@ -3,8 +3,21 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import { Server } from "http";
 import morgan from "morgan";
+import winston from "winston";
 import { z } from "zod";
-
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.colorize(),
+    winston.format.label({ label: "mock-mcp-backend", message: true }),
+    winston.format.simple()
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.simple(),
+    }),
+  ],
+});
 export function mockMcpBackend() {
   const server = new McpServer({
     name: "mock-server",
@@ -25,7 +38,7 @@ export function mockMcpBackend() {
     morgan("combined", {
       stream: {
         write: (message: string) => {
-          console.log(`mock-mcp-backend: ${message.trim()}`);
+          logger.debug(message.trim());
         },
       },
     })
@@ -40,7 +53,7 @@ export function mockMcpBackend() {
       delete transports.sse[transport.sessionId];
     });
     await server.connect(transport).catch((err) => {
-      console.error("Error connecting server:", err);
+      logger.error("Error connecting server:", err);
       res.status(500).send("Error connecting server");
     });
   });
@@ -56,25 +69,22 @@ export function mockMcpBackend() {
   let httpServer: Server | null = null;
   const listen = (port: number) =>
     new Promise<void>((resolve, reject) => {
-      console.log(`mock-mcp-backend connecting to port ${port}`);
+      logger.debug(`connecting to port ${port}`);
       httpServer = app.listen(port, (err) => {
         if (err) {
-          console.error("Error starting mock-mcp-backend:", err);
+          logger.error("Error starting", err);
           return reject(err);
         }
-        console.log(`mock-mcp-backend listening on port ${port}`);
+        logger.info(`listening on port ${port}`);
         resolve();
       });
     });
   const close = async () => {
-    console.log(`mock-mcp-backend closing`);
-    // for (const transport of Object.values(transports.sse)) {
-    //   await transport.close();
-    // }
+    logger.debug(`closing`);
     await server.close();
     await new Promise((resolve) => httpServer?.close(resolve));
-    console.log(`mock-mcp-backend closed`);
+    logger.info(`closed`);
   };
-  console.log(`mock-mcp-backend built`);
+  logger.debug(`built`);
   return { listen, close };
 }

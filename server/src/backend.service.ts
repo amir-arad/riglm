@@ -11,21 +11,20 @@ import { ServerConfigurator } from "./server";
 import { type RpcService } from "typed-rpc/server";
 
 export const makeSessionBackendFactory =
-  (configManager: ServerConfigurator) => (sessionId: string) =>
+  (config: ServerConfigurator) => (sessionId: string) =>
     makeServicesContainer(
-      makeBackend(sessionId, configManager, new Map<string, ChildProcess>()),
+      makeBackend(sessionId, config, new Map<string, ChildProcess>()),
       `Backend(${sessionId})`
     );
 
 const makeBackend =
   (
     sessionId: string,
-    configManager: ServerConfigurator,
+    config: ServerConfigurator,
     localServerProcesses: Map<string, ChildProcess>
   ) =>
   async (serverName: string) => {
-    const config = configManager.get();
-    const serverConfig = config.servers[serverName];
+    const serverConfig = config.get().servers[serverName];
 
     if (!serverConfig) {
       throw new Error(`Server "${serverName}" not found in configuration`);
