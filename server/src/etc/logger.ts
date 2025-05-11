@@ -13,21 +13,23 @@ export const makeLogger = (env: {
   const logger = winston.createLogger({
     level: env.logLevel,
     format: winston.format.combine(
-      winston.format.timestamp(),
+      winston.format.timestamp({ format: "longTime" }),
       winston.format.errors({ stack: true }),
       winston.format.json()
     ),
-    defaultMeta: { service: "abc-server" },
+    defaultMeta: { service: "ROOT" },
     transports: [
       new winston.transports.Console({
         format: winston.format.combine(
           winston.format.colorize(),
-          winston.format.printf(({ timestamp, level, message, ...meta }) => {
-            const metaString = Object.keys(meta).length
-              ? JSON.stringify(meta, null, 2)
-              : "";
-            return `${timestamp} [${level}]: ${message} ${metaString}`;
-          })
+          winston.format.printf(
+            ({ timestamp, level, message, service, ...meta }) => {
+              const metaString = Object.keys(meta).length
+                ? JSON.stringify(meta, null, 2)
+                : "";
+              return `${service}|${level} ${timestamp}: ${message} ${metaString}`;
+            }
+          )
         ),
       }),
     ],

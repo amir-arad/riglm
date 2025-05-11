@@ -5,9 +5,14 @@ import { AbcServer } from "./server";
 
 const config = new ConfigManager(env.configPath);
 const logger = makeDefaultLogger(env);
-try {
+
+async function main() {
   config.load();
-  const server = new AbcServer({ config, env, logger });
+  const server = new AbcServer({
+    config,
+    env,
+    logger: logger.child({ service: "abc-server" }),
+  });
   server.start().catch((error) => {
     logger.error("Failed to start server", { error });
     close(1);
@@ -36,7 +41,9 @@ try {
     }
     process.exit(errorCode);
   }
-} catch (error) {
+}
+main().catch((error) => {
+  console.error("Failed to initialize server", error);
   logger.error("Failed to load configuration. Exiting.");
   process.exit(1);
-}
+});
