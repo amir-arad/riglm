@@ -3,26 +3,22 @@ import {
   SSEClientTransport,
   SseError,
 } from "@modelcontextprotocol/sdk/client/sse.js";
-import { ChildProcess, spawn } from "child_process";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { type RpcService } from "typed-rpc/server";
 import { isLocalServer, isRemoteServer, Server } from "./etc/config-schema";
 import { logger } from "./etc/logger";
 import { makeServicesContainer, Services } from "./etc/service";
 import { ServerConfigurator } from "./server";
-import { type RpcService } from "typed-rpc/server";
 
 export const makeSessionBackendFactory =
   (config: ServerConfigurator) => (sessionId: string) =>
     makeServicesContainer(
-      makeBackend(sessionId, config, new Map<string, ChildProcess>()),
+      makeBackend(sessionId, config),
       `Backend(${sessionId})`
     );
 
 const makeBackend =
-  (
-    sessionId: string,
-    config: ServerConfigurator,
-    localServerProcesses: Map<string, ChildProcess>
-  ) =>
+  (sessionId: string, config: ServerConfigurator) =>
   async (serverName: string) => {
     const serverConfig = config.get().servers[serverName];
 
@@ -33,14 +29,9 @@ const makeBackend =
     let transport;
 
     if (isLocalServer(serverConfig)) {
-      transport = await setupLocalServer(
-        serverName,
-        serverConfig,
-        localServerProcesses
-      );
+      transport = await setupLocalStdioTransport(serverName, serverConfig);
     } else if (isRemoteServer(serverConfig)) {
-      transport = createTransport({
-        transportType: "sse",
+      transport = createSseTransport({
         url: serverConfig.url,
         headers: serverConfig.headers || {},
       });
@@ -60,10 +51,38 @@ const makeBackend =
       logger.info(
         `Connecting to server: ${serverName}, sessionId: ${sessionId}`
       );
-      await client.connect(transport);
+
+      // TODO: use termination signal
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          const resolvedTransport = await Promise.resolve(transport);
+          await Promise.race([
+            client.connect(resolvedTransport),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Connection timeout")), 10000)
+            ),
+          ]);
+          break;
+        } catch (error) {
+          retries--;
+          if (retries === 0) {
+            logger.error(
+              `Failed to connect to ${serverName} after all retries`
+            );
+            throw error;
+          }
+          logger.warn(
+            `Failed to connect to ${serverName}, retrying... (${retries} attempts left)`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+
       logger.info(
         `Connected to server: ${serverName}, sessionId: ${sessionId}`
       );
+
       const { tools } = await client.listTools();
       logger.info(`Discovered tools from ${serverName}:`, tools);
 
@@ -84,26 +103,7 @@ const makeBackend =
               error
             );
           }
-          // Clean up local server if needed
-          if (
-            isLocalServer(serverConfig) &&
-            localServerProcesses.has(serverName)
-          ) {
-            const serverProcess = localServerProcesses.get(serverName);
-            if (serverProcess) {
-              try {
-                serverProcess.kill();
-                logger.info(
-                  `Terminated local server process for ${serverName}`
-                );
-              } catch (error) {
-                logger.error(
-                  `Error terminating local server process for ${serverName}:`,
-                  error
-                );
-              }
-            }
-          }
+          // Local server process cleanup is handled by StdioClientTransport.close()
         },
       };
     } catch (error) {
@@ -123,105 +123,57 @@ const makeBackend =
   };
 export type Backend = Awaited<ReturnType<ReturnType<typeof makeBackend>>>;
 export type SessionBackends = (sessionId: string) => Services<Backend>;
-async function setupLocalServer(
+async function setupLocalStdioTransport(
   serverName: string,
-  config: { command: string; args: string[]; env?: Record<string, string> },
-  localServerProcesses: Map<string, ChildProcess>
+  config: { command: string; args: string[]; env?: Record<string, string> }
 ) {
   logger.info(
-    `Setting up local server "${serverName}" with command: ${config.command} ${config.args.join(" ")}`
+    `Setting up local stdio transport for "${serverName}" with command: ${config.command} ${config.args.join(" ")}`
   );
 
-  if (localServerProcesses.has(serverName)) {
-    const existingProcess = localServerProcesses.get(serverName);
-    if (existingProcess && !existingProcess.killed) {
-      logger.info(`Local server "${serverName}" is already running`);
-      // TODO: Return transport connected to existing server
-      // For now, we'll assume the server is running on localhost:8080
-      // This needs to be configured properly
-      return createTransport({
-        transportType: "sse",
-        url: "http://localhost:8080",
-        headers: {},
-      });
-    }
-  }
-
-  const serverProcess = spawn(config.command, config.args, {
-    env: { ...process.env, ...config.env },
-  });
-
-  localServerProcesses.set(serverName, serverProcess);
-
-  serverProcess.stdout.on("data", (data: Buffer) => {
-    logger.info(`[${serverName}] ${data.toString().trim()}`);
-  });
-
-  serverProcess.stderr.on("data", (data: Buffer) => {
-    logger.error(`[${serverName}] ${data.toString().trim()}`);
-  });
-
-  serverProcess.on("error", (error: Error) => {
-    logger.error(`Error in local server "${serverName}":`, error);
-  });
-
-  serverProcess.on("exit", (code: number | null, signal: string | null) => {
-    logger.info(
-      `Local server "${serverName}" exited with code ${code} (signal: ${signal})`
-    );
-    localServerProcesses.delete(serverName);
-  });
-
-  // TODO: We need a way to determine when the server is ready and what URL to connect to
-  // For now, we'll just wait a bit and assume it's on localhost:8080
-  // This needs to be configured properly in a real implementation
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  return createTransport({
-    transportType: "sse",
-    url: "http://localhost:8080",
-    headers: {},
+  return new StdioClientTransport({
+    command: config.command,
+    args: config.args,
+    env: {
+      ...Object.fromEntries(
+        Object.entries(process.env)
+          .filter(([_, v]) => v !== undefined)
+          .map(([k, v]) => [k, v as string])
+      ),
+      ...config.env,
+    },
   });
 }
 
 type TransportOptions = {
-  transportType: "sse";
   url: string;
   headers?: Record<string, string>;
 };
 
-function createTransport(options: TransportOptions) {
-  const { transportType } = options;
-  if (transportType === "sse") {
-    const { url, headers = {} } = options;
-    if (!url) {
-      throw new Error("SSE transport requires a URL");
-    }
-    headers["Accept"] = "text/event-stream";
-
-    logger.info(`SSE transport: url=${url}, headers=${Object.keys(headers)}`);
-
-    const transport = new SSEClientTransport(new URL(url), {
-      eventSourceInit: {
-        fetch: (url, init) => fetch(url, { ...init, headers }),
-      },
-      requestInit: {
-        headers,
-      },
-    });
-
-    logger.info("Connected to SSE transport");
-    return transport;
-  } else {
-    logger.error(`Invalid transport type: ${transportType}`);
-    throw new Error("Invalid transport type specified");
+function createSseTransport(options: TransportOptions) {
+  const { url, headers = {} } = options;
+  if (!url) {
+    throw new Error("SSE transport requires a URL");
   }
+  headers["Accept"] = "text/event-stream";
+
+  logger.info(`SSE transport: url=${url}, headers=${Object.keys(headers)}`);
+
+  const transport = new SSEClientTransport(new URL(url), {
+    eventSourceInit: {
+      fetch: (url, init) => fetch(url, { ...init, headers }),
+    },
+    requestInit: {
+      headers,
+    },
+  });
+
+  logger.info("Connected to SSE transport");
+  return transport;
 }
 
 async function connectServerImpl(serverName: string, serverConfig: Server) {
   logger.info(`Connecting to server: ${serverName}`);
-
-  // We only support remote servers for direct connections
   if (!isRemoteServer(serverConfig)) {
     throw new Error(
       `Server "${serverName}" is not a remote server and cannot be connected to directly`
@@ -229,11 +181,15 @@ async function connectServerImpl(serverName: string, serverConfig: Server) {
   }
 
   try {
-    const backingServerTransport = createTransport({
-      transportType: "sse",
-      url: serverConfig.url,
-      headers: serverConfig.headers || {},
-    });
+    const backingServerTransport = (await Promise.race([
+      createSseTransport({
+        url: serverConfig.url,
+        headers: serverConfig.headers || {},
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Transport creation timeout")), 10000)
+      ),
+    ])) as SSEClientTransport;
 
     const client = new Client(
       {

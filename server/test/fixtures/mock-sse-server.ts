@@ -1,10 +1,9 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 import { Server } from "http";
 import morgan from "morgan";
 import winston from "winston";
-import { z } from "zod";
+import { makeMockServer } from "./mock-server";
 const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
@@ -18,19 +17,8 @@ const logger = winston.createLogger({
     }),
   ],
 });
-export function mockMcpBackend() {
-  const server = new McpServer({
-    name: "mock-server",
-    version: "1.0.0",
-  });
-
-  server.tool("echo", { message: z.string() }, async ({ message }) => ({
-    content: [{ type: "text", text: message }],
-  }));
-
-  server.tool("add", { a: z.number(), b: z.number() }, async ({ a, b }) => ({
-    content: [{ type: "text", text: String(a + b) }],
-  }));
+export function mocSseServer() {
+  const server = makeMockServer();
 
   const app = express();
   app.use(express.json());
@@ -82,7 +70,9 @@ export function mockMcpBackend() {
   const close = async () => {
     logger.debug(`closing`);
     await server.close();
-    await new Promise((resolve) => httpServer?.close(resolve));
+    await new Promise((resolve, reject) =>
+      httpServer?.close((err) => (err ? reject(err) : resolve))
+    );
     logger.info(`closed`);
   };
   logger.debug(`built`);
