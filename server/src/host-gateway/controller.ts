@@ -1,14 +1,20 @@
 import { Request, Response, Router } from "express";
 import { logger } from "../etc/logger";
 import { HostsService } from "./hosts.service";
-import { Services } from "../etc/service";
+import { Services, ServiceOptions } from "../etc/service";
 
 export function makeHostsRoutes(hostsServices: Services<HostsService>) {
   const hostsRoutes = Router();
 
   hostsRoutes.param("endpointId", async (req, res, next, endpointId) => {
     try {
-      const hostsService = await hostsServices.get(endpointId);
+      // Create AbortController for param middleware
+      const controller = new AbortController();
+      res.once("close", () => controller.abort());
+
+      const hostsService = await hostsServices.get(endpointId, {
+        signal: controller.signal,
+      });
       if (!hostsService) {
         return res.status(404).json({ error: "Endpoint not found" }), void 0;
       }
@@ -22,15 +28,19 @@ export function makeHostsRoutes(hostsServices: Services<HostsService>) {
   hostsRoutes.get("/:endpointId/sse", async (req, res) => {
     try {
       const { hostsService } = req as EndpointRequest;
+      const controller = new AbortController();
       const sessionId = await hostsService.createSession(
         `/${hostsService.endpointId}/messages`,
-        res
+        res,
+        { signal: controller.signal }
       );
+
       res.write(`event: session\ndata: ${JSON.stringify({ sessionId })}\n\n`);
       const messageEndpoint = `/${hostsService.endpointId}/messages/${sessionId}`;
       res.write(`event: endpoint\ndata: ${messageEndpoint}\n\n`);
       req.on("close", () => {
         logger.info(`SSE connection closed for session: ${sessionId}`);
+        controller.abort();
         hostsService.removeSession(sessionId);
       });
 

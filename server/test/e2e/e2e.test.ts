@@ -1,14 +1,13 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { ChildProcess } from "child_process";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { expect } from "chai";
+import { setTimeout } from "node:timers/promises";
+import winston from "winston";
 import { Config } from "../../src/etc/config-schema";
 import { AbcServer, ServerOptons } from "../../src/server";
-import winston from "winston";
-import { setTimeout } from "node:timers/promises";
 import { mocSseServer } from "../fixtures/mock-sse-server";
 
-describe("Configuration E2E Test", () => {
+describe("E2E Test", () => {
   let mockBackend: ReturnType<typeof mocSseServer> | null = null;
   let client: Client | null = null;
   let uut: AbcServer | null = null;

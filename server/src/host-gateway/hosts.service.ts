@@ -10,25 +10,28 @@ import {
 import { ServerResponse } from "http";
 import { JSONSchema7 } from "json-schema";
 import { logger } from "../etc/logger";
-import { makeServicesContainer } from "../etc/service";
+import { makeServicesContainer, ServiceOptions } from "../etc/service";
 import { ServerConfigurator } from "../server";
 import { SessionBackends } from "../backend.service";
 import { TransportSessionManager } from "./transport-session-manager";
 import { ToolDefinition, ToolHandler } from "../etc/mcp-schema";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 export const makeHostsServiceFactory = (
   sessionBackends: SessionBackends,
   configManager: ServerConfigurator
 ) =>
   makeServicesContainer(
-    (name) => makeHostsService(name, sessionBackends, configManager),
+    (name, options) =>
+      makeHostsService(name, sessionBackends, configManager, options),
     `HostsService`
   );
 
 async function makeHostsService(
   name: string,
   sessionBackends: SessionBackends,
-  configManager: ServerConfigurator
+  configManager: ServerConfigurator,
+  options?: ServiceOptions
 ) {
   type ToolEntry = [ToolDefinition, ToolHandler];
 
@@ -52,9 +55,12 @@ async function makeHostsService(
     }
   );
 
-  const tsm = new TransportSessionManager(mcpServer);
-  const makeHostSession = async (sessionId: string) => {
-    const serversConnections = sessionBackends(sessionId);
+  const tsm = new TransportSessionManager();
+  const makeHostSession = async (
+    sessionId: string,
+    options?: ServiceOptions
+  ) => {
+    const serversConnections = sessionBackends(sessionId, options);
 
     // Get contexts from config
     const contexts = endpoint.contexts.map((contextName) => {
@@ -77,7 +83,9 @@ async function makeHostsService(
     const proxyTargets = new Map(
       (
         await Promise.all(
-          serverNames.map((serverName) => serversConnections.get(serverName))
+          serverNames.map((serverName) =>
+            serversConnections.get(serverName, options)
+          )
         )
       ).map((server) => [server.serverName, server])
     );
@@ -130,10 +138,17 @@ async function makeHostsService(
   };
   const hostSessions = makeServicesContainer(makeHostSession, `HostSession`);
 
-  async function initSession(endpoint: string, res: ServerResponse) {
-    const transportSession = await tsm.createSession(endpoint, res);
+  async function initSession(
+    endpoint: string,
+    res: ServerResponse,
+    options?: ServiceOptions
+  ) {
+    const transport = new SSEServerTransport(endpoint, res);
+    const transportSession = tsm.createSession(transport, options);
+    await mcpServer.connect(transport);
     const { sessionId } = transportSession;
-    const appSession = await hostSessions.get(sessionId);
+    logger.info(`New session ${sessionId} for endpoint ${endpoint}`);
+    const appSession = await hostSessions.get(sessionId, options);
     transportSession.addService(
       "serversConnections",
       appSession.serversConnections
@@ -149,7 +164,7 @@ async function makeHostsService(
       if (!sessionId) {
         throw new McpError(ErrorCode.InvalidRequest, "Session ID is required");
       }
-      const appSession = await hostSessions.get(sessionId);
+      const appSession = await hostSessions.get(sessionId, { signal });
       return { tools: appSession.tools };
     }
   );
@@ -161,7 +176,7 @@ async function makeHostsService(
       if (!sessionId) {
         throw new McpError(ErrorCode.InvalidRequest, "Session ID is required");
       }
-      const appSession = await hostSessions.get(sessionId);
+      const appSession = await hostSessions.get(sessionId, { signal });
       const handler = appSession.toolHandlers.get(request.params.name);
       if (!handler) {
         throw new McpError(

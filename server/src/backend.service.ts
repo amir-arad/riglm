@@ -7,19 +7,26 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { type RpcService } from "typed-rpc/server";
 import { isLocalServer, isRemoteServer, Server } from "./etc/config-schema";
 import { logger } from "./etc/logger";
-import { makeServicesContainer, Services } from "./etc/service";
+import { makeServicesContainer, Services, ServiceOptions } from "./etc/service";
 import { ServerConfigurator } from "./server";
+import { setTimeout } from "node:timers/promises";
 
 export const makeSessionBackendFactory =
-  (config: ServerConfigurator) => (sessionId: string) =>
+  (config: ServerConfigurator) =>
+  (sessionId: string, options?: ServiceOptions) =>
     makeServicesContainer(
-      makeBackend(sessionId, config),
+      makeBackend(sessionId, config, options),
       `Backend(${sessionId})`
     );
 
 const makeBackend =
-  (sessionId: string, config: ServerConfigurator) =>
-  async (serverName: string) => {
+  (sessionId: string, config: ServerConfigurator, options?: ServiceOptions) =>
+  async (serverName: string, serviceOptions?: ServiceOptions) => {
+    // Combine signals if both are provided
+    const signal =
+      serviceOptions?.signal && options?.signal
+        ? AbortSignal.any([serviceOptions.signal, options.signal])
+        : serviceOptions?.signal || options?.signal;
     const serverConfig = config.get().servers[serverName];
 
     if (!serverConfig) {
@@ -29,11 +36,16 @@ const makeBackend =
     let transport;
 
     if (isLocalServer(serverConfig)) {
-      transport = await setupLocalStdioTransport(serverName, serverConfig);
+      transport = await setupLocalStdioTransport(
+        serverName,
+        serverConfig,
+        signal
+      );
     } else if (isRemoteServer(serverConfig)) {
       transport = createSseTransport({
         url: serverConfig.url,
         headers: serverConfig.headers || {},
+        signal,
       });
     } else {
       throw new Error(`Invalid server configuration for "${serverName}"`);
@@ -52,19 +64,27 @@ const makeBackend =
         `Connecting to server: ${serverName}, sessionId: ${sessionId}`
       );
 
-      // TODO: use termination signal
       let retries = 3;
       while (retries > 0) {
         try {
           const resolvedTransport = await Promise.resolve(transport);
-          await Promise.race([
-            client.connect(resolvedTransport),
-            new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("Connection timeout")), 10000)
-            ),
-          ]);
+
+          // Create timeout signal
+          const timeoutController = new AbortController();
+          const timeoutSignal = AbortSignal.timeout(10000);
+
+          // Combine with existing signal if present
+          const connectionSignal = signal
+            ? AbortSignal.any([signal, timeoutSignal])
+            : timeoutSignal;
+
+          await client.connect(resolvedTransport, { signal: connectionSignal });
           break;
         } catch (error) {
+          if (signal?.aborted) {
+            throw new Error("Connection aborted by signal");
+          }
+
           retries--;
           if (retries === 0) {
             logger.error(
@@ -75,7 +95,28 @@ const makeBackend =
           logger.warn(
             `Failed to connect to ${serverName}, retrying... (${retries} attempts left)`
           );
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // Create delay signal
+          const delaySignal = AbortSignal.timeout(1000);
+          const retrySignal = signal
+            ? AbortSignal.any([signal, delaySignal])
+            : delaySignal;
+
+          try {
+            await Promise.race([
+              setTimeout(1000),
+              new Promise((_, reject) => {
+                retrySignal.addEventListener("abort", () =>
+                  reject(new Error("Retry delay aborted"))
+                );
+              }),
+            ]);
+          } catch (error) {
+            if (signal?.aborted) {
+              throw new Error("Connection retry aborted by signal");
+            }
+            throw error;
+          }
         }
       }
 
@@ -83,7 +124,7 @@ const makeBackend =
         `Connected to server: ${serverName}, sessionId: ${sessionId}`
       );
 
-      const { tools } = await client.listTools();
+      const { tools } = await client.listTools({ signal });
       logger.info(`Discovered tools from ${serverName}:`, tools);
 
       return {
@@ -122,10 +163,14 @@ const makeBackend =
     }
   };
 export type Backend = Awaited<ReturnType<ReturnType<typeof makeBackend>>>;
-export type SessionBackends = (sessionId: string) => Services<Backend>;
+export type SessionBackends = (
+  sessionId: string,
+  options?: ServiceOptions
+) => Services<Backend>;
 async function setupLocalStdioTransport(
   serverName: string,
-  config: { command: string; args: string[]; env?: Record<string, string> }
+  config: { command: string; args: string[]; env?: Record<string, string> },
+  signal?: AbortSignal
 ) {
   logger.info(
     `Setting up local stdio transport for "${serverName}" with command: ${config.command} ${config.args.join(" ")}`
@@ -148,10 +193,11 @@ async function setupLocalStdioTransport(
 type TransportOptions = {
   url: string;
   headers?: Record<string, string>;
+  signal?: AbortSignal;
 };
 
 function createSseTransport(options: TransportOptions) {
-  const { url, headers = {} } = options;
+  const { url, headers = {}, signal } = options;
   if (!url) {
     throw new Error("SSE transport requires a URL");
   }
@@ -161,10 +207,11 @@ function createSseTransport(options: TransportOptions) {
 
   const transport = new SSEClientTransport(new URL(url), {
     eventSourceInit: {
-      fetch: (url, init) => fetch(url, { ...init, headers }),
+      fetch: (url, init) => fetch(url, { ...init, headers, signal }),
     },
     requestInit: {
       headers,
+      signal,
     },
   });
 
@@ -186,9 +233,10 @@ async function connectServerImpl(serverName: string, serverConfig: Server) {
         url: serverConfig.url,
         headers: serverConfig.headers || {},
       }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Transport creation timeout")), 10000)
+      setTimeout(10000).then(() =>
+        Promise.reject(new Error("Transport creation timeout"))
       ),
+      // TODO: use abort signal
     ])) as SSEClientTransport;
 
     const client = new Client(

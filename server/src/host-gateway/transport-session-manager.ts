@@ -1,17 +1,10 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { ServerResponse } from "http";
+import { setTimeout } from "timers/promises";
 import { logger } from "../etc/logger";
-import { closeServices, Service } from "../etc/service";
-
-export interface TransportSession {
-  sessionId: string;
-  transport: SSEServerTransport;
-  createdAt: Date;
-  lastActivity: Date;
-  addService: (name: string, service: Promise<Service> | Service) => void;
-  close(): Promise<void>;
-}
+import { closeServices, Service, ServiceOptions } from "../etc/service";
+export type TransportSession = ReturnType<
+  TransportSessionManager["createSession"]
+>;
 export interface CleanupStatus {
   sessionsRemoved: number;
   remainingSessions: number;
@@ -23,13 +16,10 @@ const TRANSPORT_OPTIONS = {
 };
 export class TransportSessionManager {
   private sessions = new Map<string, TransportSession>();
-  private server: Server;
   private intervalId: NodeJS.Timeout | null = null;
   private isCleaningUp: boolean = false;
 
-  constructor(server: Server) {
-    this.server = server;
-
+  constructor() {
     this.intervalId = setInterval(() => {
       this.cleanupInactiveSessions().catch((err) => {
         logger.error("Error cleaning up inactive sessions:", err);
@@ -43,14 +33,8 @@ export class TransportSessionManager {
     );
   }
 
-  async createSession(
-    endpoint: string,
-    res: ServerResponse
-  ): Promise<TransportSession> {
-    const transport = new SSEServerTransport(endpoint, res);
+  createSession(transport: SSEServerTransport, options?: ServiceOptions) {
     const { sessionId } = transport;
-    logger.info(`New session ${sessionId} for endpoint ${endpoint}`);
-
     transport.onerror = (error) => {
       logger.error(`Error in session ${sessionId}:`, error);
       this.removeSession(sessionId).catch((err) => {
@@ -65,10 +49,23 @@ export class TransportSessionManager {
       });
     };
 
-    await this.server.connect(transport);
     const services = new Map<string, Promise<Service>>([
       ["transport", Promise.resolve(transport)],
     ]);
+
+    // Handle abort signal
+    if (options?.signal) {
+      options.signal.addEventListener(
+        "abort",
+        () => {
+          logger.info(`Session ${sessionId} aborted by signal`);
+          this.removeSession(sessionId).catch((error) => {
+            logger.error(`Error removing aborted session ${sessionId}:`, error);
+          });
+        },
+        { once: true }
+      );
+    }
 
     const session = {
       sessionId,
@@ -193,7 +190,7 @@ export class TransportSessionManager {
       if (this.isCleaningUp) {
         logger.warn("Cleanup in progress, waiting");
         while (this.isCleaningUp) {
-          await setTimeout.__promisify__(10);
+          await setTimeout(10);
         }
       }
       this.isCleaningUp = true;
@@ -219,6 +216,8 @@ export class TransportSessionManager {
     } catch (error) {
       logger.error("Error during TransportSessionManager cleanup:", error);
       throw error;
+    } finally {
+      this.isCleaningUp = false;
     }
   }
 

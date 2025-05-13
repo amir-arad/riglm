@@ -1,6 +1,16 @@
 import { logger } from "./logger";
 
 /**
+ * Options for service creation and management
+ */
+export interface ServiceOptions {
+  /**
+   * Optional AbortSignal for controlling service lifecycle
+   */
+  signal?: AbortSignal;
+}
+
+/**
  * A generic service interface
  */
 export type Service = {
@@ -27,14 +37,19 @@ export function closeServices(
 }
 
 export function makeServicesContainer<T extends Service>(
-  factory: (id: string) => Promise<T>,
+  factory: (id: string, options?: ServiceOptions) => Promise<T>,
   serviceName: string
 ) {
   const services = new Map<string, Promise<T>>();
   return {
-    get: (id: string) => {
+    get: (id: string, options?: ServiceOptions) => {
       if (!services.has(id)) {
-        const sp = factory(id).then((s) => {
+        // Check if signal is already aborted
+        if (options?.signal?.aborted) {
+          return Promise.reject(new Error("AbortSignal is already aborted"));
+        }
+
+        const sp = factory(id, options).then((s) => {
           const orig_close = s.close;
           s.close = () => {
             if (services.get(id) === sp) {
@@ -42,9 +57,28 @@ export function makeServicesContainer<T extends Service>(
             }
             return orig_close();
           };
+
+          // Handle abort signal
+          if (options?.signal) {
+            options.signal.addEventListener(
+              "abort",
+              () => {
+                logger.info(`${serviceName} service aborted: ${id}`);
+                s.close().catch((error) => {
+                  logger.error(
+                    `Error closing aborted service ${serviceName}: ${id}`,
+                    error
+                  );
+                });
+              },
+              { once: true }
+            );
+          }
+
           logger.info(`${serviceName} service created: ${id}`);
           return s;
         });
+
         services.set(id, sp);
         sp.catch((error) => {
           logger.error(`Error creating ${serviceName} service: ${id}`, error);
