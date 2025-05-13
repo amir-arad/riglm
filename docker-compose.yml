@@ -1,17 +1,39 @@
 services:
   abc-server:
     build:
-      context: .
-      dockerfile: ./server/Dockerfile
-      # Enable BuildKit features
+      context: ./server
+      dockerfile: Dockerfile
       args:
         BUILDKIT_INLINE_CACHE: 1
     ports:
-      - "3000:3000" # Match the port inside the container
-    env_file:
-      - ./server/.env
+      - "56667:56667"
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - NODE_ENV=production
-    volumes:
-      - ./data:/app/data # For database persistence
     restart: unless-stopped
+    user: "appuser:appgroup"
+    networks:
+      - mcp-net
+
+  mcp-inspector:
+    build:
+      context: .
+      dockerfile: Dockerfile.inspector
+    ports:
+      - "6274:6274"
+      - "6277:6277"
+    environment:
+      - CLIENT_PORT=6274
+      - SERVER_PORT=6277
+    restart: unless-stopped
+    networks:
+      - mcp-net
+    extra_hosts:
+      - "localhost:host-gateway"
+
+networks:
+  mcp-net:
+    name: mcp-net
+    driver: bridge

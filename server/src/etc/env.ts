@@ -18,7 +18,6 @@ export const env = {
     process.env.CONFIG_PATH || path.join(process.cwd(), "config.json"),
   logLevel: process.env.LOG_LEVEL || "info",
   isProduction: process.env.NODE_ENV === "production",
-  zepApiKey: process.env.ZEP_API_KEY || "",
 } satisfies Arguments;
 
 export type Arguments = {
@@ -27,5 +26,4 @@ export type Arguments = {
   configPath: string;
   logLevel: string;
   isProduction: boolean;
-  zepApiKey: string;
 };

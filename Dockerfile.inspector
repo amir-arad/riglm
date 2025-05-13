@@ -1,0 +1,11 @@
+FROM node:23-alpine
+
+ENV CLIENT_PORT=6274
+ENV SERVER_PORT=6277
+
+RUN npm install -g @modelcontextprotocol/inspector
+
+EXPOSE ${CLIENT_PORT}
+EXPOSE ${SERVER_PORT}
+
+CMD ["mcp-inspector"]

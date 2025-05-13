@@ -48,7 +48,10 @@ const makeBackend =
         signal,
       });
     } else {
-      throw new Error(`Invalid server configuration for "${serverName}"`);
+      serverConfig satisfies never; // assure exhaustive check
+      throw new Error(
+        `Unhandled server config type: ${JSON.stringify(serverConfig)}`
+      );
     }
 
     const client = new Client(
