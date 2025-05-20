@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ghostwheels": {
+      "type": "sse",
+      "url": "http://ghostwheels:56667/main/sse"
+    },
+    "default-server": {
+      "command": "npx",
+      "args": ["mcp-remote", "http://ghostwheels:56667/main/sse"]
+    }
+  }
+}
