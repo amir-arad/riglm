@@ -2,13 +2,32 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "dev",
-      "path": "client",
-      "group": "build",
-      "problemMatcher": [],
-      "label": "npm: dev - client",
-      "detail": "dev"
+      "label": "Deploy Service (Local Env)",
+      "type": "shell",
+      "command": "local-env/deploy.bat",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Service (Local Env)",
+      "type": "shell",
+      "command": "docker-compose -f local-env/docker-compose.yml up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop Service (Local Env)",
+      "type": "shell",
+      "command": "docker-compose -f local-env/docker-compose.yml down",
+      "problemMatcher": []
+    },
+    {
+      "label": "View Logs (Local Env)",
+      "type": "shell",
+      "command": "docker-compose -f local-env/docker-compose.yml logs -f",
+      "problemMatcher": []
     },
     {
       "type": "npm",

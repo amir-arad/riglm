@@ -11,7 +11,7 @@ async function main() {
   const server = new AbcServer({
     config,
     env,
-    logger: logger.child({ service: "abc-server" }),
+    logger: logger.child({ service: "ghostwheels" }),
   });
   server.start().catch((error) => {
     logger.error("Failed to start server", { error });

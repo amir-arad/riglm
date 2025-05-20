@@ -76,7 +76,7 @@ Configure docker-compose.yml to load environment variables from `.env` file:
 
 ```yaml
 services:
-  abc-server:
+  ghostwheels:
     build:
       context: ./server
       dockerfile: Dockerfile

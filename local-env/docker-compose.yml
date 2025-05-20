@@ -1,10 +1,13 @@
+version: '3.8'
+
 services:
   ghostwheels:
+    image: local/ghostwheels:current
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: local-env/Dockerfile
       args:
-        BUILDKIT_INLINE_CACHE: 1
+        - DEV_IMAGE_TAG=latest
     ports:
       - "56667:56667"
     volumes:
@@ -19,7 +22,7 @@ services:
 
   mcp-inspector:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.inspector
     ports:
       - "6274:6274"

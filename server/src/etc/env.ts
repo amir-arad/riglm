@@ -2,9 +2,8 @@ import dotenv from "dotenv";
 import path from "path";
 
 dotenv.config({
-  path: path.join(
-    process.cwd(),
-    process.env.NODE_ENV === "production" ? ".env" : ".local.env"
+  path: [process.env.NODE_ENV + ".env", ".env"].map((file) =>
+    path.join(process.cwd(), file)
   ),
   override: true,
   debug: process.env.NODE_ENV !== "production",

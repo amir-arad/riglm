@@ -16,7 +16,7 @@ describe("E2E Test", () => {
     level: "info",
     format: winston.format.combine(
       winston.format.colorize(),
-      winston.format.label({ label: "abc-server", message: true }),
+      winston.format.label({ label: "ghostwheels", message: true }),
       winston.format.simple()
     ),
     transports: [
@@ -28,7 +28,7 @@ describe("E2E Test", () => {
 
   const mockOptions = {
     env: {
-      port: 56667,
+      port: 56665,
       isProduction: false,
     },
     config: {
