@@ -4,6 +4,7 @@ import { logger } from "./logger";
  * Options for service creation and management
  */
 export interface ServiceOptions {
+  logger?: typeof logger;
   /**
    * Optional AbortSignal for controlling service lifecycle
    */

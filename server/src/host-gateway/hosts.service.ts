@@ -10,7 +10,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { ServerResponse } from "http";
 import { JSONSchema7 } from "json-schema";
-import { logger } from "../etc/logger";
+import { logger as defaultLogger } from "../etc/logger";
 import { makeServicesContainer, ServiceOptions } from "../etc/service";
 import { ServerConfigurator } from "../server";
 import { SessionBackends } from "../backend.service";
@@ -34,6 +34,7 @@ async function makeHostsService(
   configManager: ServerConfigurator,
   options?: ServiceOptions
 ) {
+  const logger = options?.logger || defaultLogger;
   type ToolEntry = [ToolDefinition, ToolHandler];
 
   const endpoint = configManager.get().endpoints[name];
@@ -106,20 +107,30 @@ async function makeHostsService(
 
         // Include all tools from this server
         for (const remoteTool of target.tools) {
+          // Create hierarchically namespaced tool name by prepending server ID
+          // This preserves any existing namespacing from downstream servers
+          // complies with URI namespace hierarchy conventions
+          const namespacedToolName = `${serverName}/${remoteTool.name}`;
+
           toolEntries.push([
             {
-              name: remoteTool.name, // Use original name - no aliasing in MVP
+              name: namespacedToolName, // Use namespaced name for external exposure
               description: remoteTool.description || "",
               inputSchema: (remoteTool.inputSchema || {}) as JSONSchema7,
             },
             async function (args: Record<string, unknown> | undefined) {
-              return target.client.callTool(
-                {
-                  name: remoteTool.name,
-                  arguments: args,
-                },
-                CallToolResultSchema
-              ) as Promise<CallToolResult>;
+              logger.debug(
+                `CALLING DOWNSTREAM TOOL: ${remoteTool.name} with args:`,
+                JSON.stringify(args)
+              );
+              const result = (await target.client.callTool({
+                name: remoteTool.name, // Use original name when calling remote server
+                arguments: args,
+              })) as CallToolResult; // Explicitly assert the type
+              logger.debug(
+                `RAW RESULT FROM DOWNSTREAM: ${JSON.stringify(result)}`
+              );
+              return result;
             },
           ]);
         }
