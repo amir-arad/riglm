@@ -4,6 +4,8 @@ import { Server } from "http";
 import morgan from "morgan";
 import winston from "winston";
 import { makeMockServer } from "./mock-server";
+import { setTimeout } from "node:timers/promises";
+
 const logger = winston.createLogger({
   level: "info",
   format: winston.format.combine(
@@ -37,6 +39,10 @@ export function mocSseServer() {
   app.get("/sse", async (_, res) => {
     const transport = new SSEServerTransport("/messages", res);
     transports.sse[transport.sessionId] = transport;
+    transport.onclose = () => {
+      logger.debug("transport closed");
+      res.end();
+    };
     res.on("close", () => {
       delete transports.sse[transport.sessionId];
     });
@@ -69,11 +75,17 @@ export function mocSseServer() {
     });
   const close = async () => {
     logger.debug(`closing`);
+    const closeP = new Promise((resolve) => {
+      httpServer?.on("close", resolve);
+    });
+    httpServer?.close();
+    httpServer = null;
+    await closeP;
+    logger.info(`closed httpServer`);
+    await Promise.all(Object.values(transports.sse).map((t) => t.close()));
+    logger.debug(`closed transports`);
     await server.close();
-    await new Promise((resolve, reject) =>
-      httpServer?.close((err) => (err ? reject(err) : resolve))
-    );
-    logger.info(`closed`);
+    logger.info(`closed mcpServer`);
   };
   logger.debug(`built`);
   return { listen, close };

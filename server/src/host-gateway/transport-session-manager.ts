@@ -1,4 +1,4 @@
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { setTimeout } from "timers/promises";
 import { logger } from "../etc/logger";
 import { closeServices, Service, ServiceOptions } from "../etc/service";
@@ -33,8 +33,11 @@ export class TransportSessionManager {
     );
   }
 
-  createSession(transport: SSEServerTransport, options?: ServiceOptions) {
+  createSession(transport: Transport, options?: ServiceOptions) {
     const { sessionId } = transport;
+    if (!sessionId) {
+      throw new Error("Transport session ID is required");
+    }
     transport.onerror = (error) => {
       logger.error(`Error in session ${sessionId}:`, error);
       this.removeSession(sessionId).catch((err) => {

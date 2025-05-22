@@ -72,6 +72,10 @@ describe("E2E Test", () => {
 
   afterEach(async function () {
     try {
+      await cleanup(
+        "Client transport",
+        Promise.resolve(client?.transport?.close())
+      );
       await cleanup("Client", Promise.resolve(client?.close()));
       client = null;
       await cleanup("Unit under test", Promise.resolve(uut?.close()));

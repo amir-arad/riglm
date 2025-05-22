@@ -7,7 +7,7 @@ module.exports = {
     // "reflect-metadata",
   ],
   extension: ["ts"],
-  spec: ["test/**/*.test.ts"],
+  spec: ["test/**/*.test.ts", "test/*.test.ts"],
   timeout: 10000,
   slow: 5000,
   //   exit: true,

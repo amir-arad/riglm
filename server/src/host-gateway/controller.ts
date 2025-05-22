@@ -1,8 +1,9 @@
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { Request, Response, Router } from "express";
 import { ApiError } from "../etc/error";
 import { logger } from "../etc/logger";
+import { Services } from "../etc/service";
 import { HostsService } from "./hosts.service";
-import { Services, ServiceOptions } from "../etc/service";
 
 export function makeHostsRoutes(hostsServices: Services<HostsService>) {
   const hostsRoutes = Router();
@@ -37,8 +38,10 @@ export function makeHostsRoutes(hostsServices: Services<HostsService>) {
       }
       const controller = new AbortController();
       const sessionId = await request.hostsService.createSession(
-        `/${request.hostsService.endpointId}/messages`,
-        res,
+        new SSEServerTransport(
+          `/${request.hostsService.endpointId}/messages`,
+          res
+        ),
         { signal: controller.signal }
       );
 

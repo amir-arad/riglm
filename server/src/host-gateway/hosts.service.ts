@@ -1,22 +1,21 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ApiError } from "../etc/error";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   CallToolRequestSchema,
   CallToolResult,
-  CallToolResultSchema,
   ErrorCode,
   ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import { ServerResponse } from "http";
 import { JSONSchema7 } from "json-schema";
+import { SessionBackends } from "../backend.service";
+import { ApiError } from "../etc/error";
+import { FilterEngine } from "../etc/filter";
 import { logger as defaultLogger } from "../etc/logger";
+import { ToolDefinition, ToolHandler } from "../etc/mcp-schema";
 import { makeServicesContainer, ServiceOptions } from "../etc/service";
 import { ServerConfigurator } from "../server";
-import { SessionBackends } from "../backend.service";
 import { TransportSessionManager } from "./transport-session-manager";
-import { ToolDefinition, ToolHandler } from "../etc/mcp-schema";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 export const makeHostsServiceFactory = (
   sessionBackends: SessionBackends,
@@ -36,6 +35,40 @@ async function makeHostsService(
 ) {
   const logger = options?.logger || defaultLogger;
   type ToolEntry = [ToolDefinition, ToolHandler];
+
+  // Cache for FilterEngine instances based on filter patterns
+  const filterEngineCache = new Map<string, FilterEngine>();
+
+  // Helper to get or create a FilterEngine instance
+  function getFilterEngine(serverName: string): FilterEngine {
+    const config = configManager.get();
+    const serverConfig = config.servers[serverName];
+    const serverFilters = serverConfig?.filters || [];
+    const globalFilters = config.filters || [];
+    const patterns = [
+      ...globalFilters,
+      ...serverFilters.map((f) => namespace(serverName, f)),
+    ];
+
+    if (!patterns.length) {
+      return new FilterEngine([]);
+    }
+
+    const key = patterns.sort().join(",");
+    let engine = filterEngineCache.get(key);
+    if (!engine) {
+      engine = new FilterEngine(patterns);
+      filterEngineCache.set(key, engine);
+    }
+    return engine;
+  }
+
+  function namespace(serverName: string, toolName: string) {
+    return `${serverName}/${toolName}`;
+  }
+
+  // Helper to resolve filters for a server - returns both server-specific and global filters
+  function resolveFilters(serverName: string) {}
 
   const endpoint = configManager.get().endpoints[name];
   if (!endpoint) {
@@ -104,13 +137,19 @@ async function makeHostsService(
             `Server "${serverName}" not found or connection failed`
           );
         }
+        const serverFilterEngine = getFilterEngine(serverName);
 
         // Include all tools from this server
         for (const remoteTool of target.tools) {
           // Create hierarchically namespaced tool name by prepending server ID
           // This preserves any existing namespacing from downstream servers
           // complies with URI namespace hierarchy conventions
-          const namespacedToolName = `${serverName}/${remoteTool.name}`;
+          const namespacedToolName = namespace(serverName, remoteTool.name);
+          // Skip if filtered by either server-specific or global filters
+          if (serverFilterEngine.shouldFilter(namespacedToolName)) {
+            logger.debug(`Filtered tool ${namespacedToolName}`);
+            continue;
+          }
 
           toolEntries.push([
             {
@@ -150,12 +189,7 @@ async function makeHostsService(
   };
   const hostSessions = makeServicesContainer(makeHostSession, `HostSession`);
 
-  async function initSession(
-    endpoint: string,
-    res: ServerResponse,
-    options?: ServiceOptions
-  ) {
-    const transport = new SSEServerTransport(endpoint, res);
+  async function createSession(transport: Transport, options?: ServiceOptions) {
     const transportSession = tsm.createSession(transport, options);
     await mcpServer.connect(transport);
     const { sessionId } = transportSession;
@@ -207,11 +241,12 @@ async function makeHostsService(
     hasSession: tsm.hasSession,
     getSession: tsm.getSession,
     removeSession: tsm.removeSession,
-    createSession: initSession,
+    createSession,
     status: () => ({
       status: "ok",
       activeSessions: tsm.getActiveSessions(),
     }),
+    hostSessions,
     close: async () => {
       await tsm.close();
       await mcpServer.close();

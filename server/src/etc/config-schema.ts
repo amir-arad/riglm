@@ -4,12 +4,14 @@ export interface LocalServer {
   args: string[];
   env?: Record<string, string>;
   description?: string;
+  filters?: Filters;
 }
 
 export interface RemoteServer {
   url: string;
   headers?: Record<string, string>;
   description?: string;
+  filters?: Filters;
 }
 
 export type Server = LocalServer | RemoteServer;
@@ -26,10 +28,13 @@ export interface Endpoint {
   apiKey?: string;
 }
 
+export type Filters = string[];
+
 export interface Config {
   servers: Record<Identifier, Server>;
   contexts: Record<Identifier, Context>;
   endpoints: Record<Identifier, Endpoint>;
+  filters?: Filters;
 }
 
 // Helper to determine if a server is local or remote
