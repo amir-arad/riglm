@@ -15,12 +15,14 @@ This document outlines the plan for creating a new Dockerfile for the ABC server
 The Dockerfile will use a multi-stage build approach:
 
 ### Builder Stage (`node:23-alpine AS builder`)
+
 - Install build tools and curl
 - Download and install Docker CLI
 - Copy package*.json and install all dependencies
 - Copy source code and build the application
 
 ### Final Stage (`node:23-alpine`)
+
 - Create non-root user
 - Set up working directory and environment
 - Copy built artifacts and Docker CLI from builder
@@ -81,16 +83,20 @@ graph TD
 ## Runtime Considerations
 
 ### Configuration Files
+
 - The `.env` file should be mounted at `/app/data/.env` in the container
 - The main configuration file path should be specified as an environment variable in the `.env` file
 - The application should be configured to load `.env` from `/app/data/.env`
 
 ### Volume Mounts
+
 When running the container, you'll need to:
+
 1. Mount your local `./data` directory to `/app/data` in the container
 2. Mount the Docker socket (e.g., `-v /var/run/docker.sock:/var/run/docker.sock`) if Docker commands are needed
 
 ### Security
+
 - The application runs as a non-root user (`appuser`)
 - Only production dependencies are installed in the final image
 - The Docker socket mount should be used cautiously as it grants significant privileges
