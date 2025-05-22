@@ -1,4 +1,5 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { ApiError } from "../etc/error";
 import {
   CallToolRequestSchema,
   CallToolResult,
@@ -37,7 +38,7 @@ async function makeHostsService(
 
   const endpoint = configManager.get().endpoints[name];
   if (!endpoint) {
-    throw new Error(`Endpoint "${name}" not found in configuration`);
+    throw ApiError.notFound(`Endpoint "${name}" not found`);
   }
 
   const mcpServer = new Server(

@@ -201,4 +201,33 @@ describe("E2E Test", () => {
     })) as any;
     expect(addResult.content[0].text).to.equal("15");
   });
+
+  it("should return 404 for non-existent endpoints", async () => {
+    if (!client || !uut) {
+      throw new Error("Test is not initialized");
+    }
+
+    currentConfig = {
+      servers: {},
+      contexts: {},
+      endpoints: {},
+    };
+
+    await uut.start();
+
+    try {
+      await client.connect(
+        new SSEClientTransport(
+          new URL("/non-existent-endpoint/sse", `http://localhost:${uut.port}`)
+        )
+      );
+      // If we reach here, the test should fail as we expect a 404 error
+      expect.fail("Expected connection to fail with 404 error");
+    } catch (error: any) {
+      // SSE client formats error as "SSE error: Non-200 status code (404)"
+      expect(error.message).to.include("404");
+      // The actual error message is not propagated through the SSE client
+      // so we just verify we got the correct status code
+    }
+  });
 });

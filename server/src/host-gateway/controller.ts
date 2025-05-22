@@ -1,4 +1,5 @@
 import { Request, Response, Router } from "express";
+import { ApiError } from "../etc/error";
 import { logger } from "../etc/logger";
 import { HostsService } from "./hosts.service";
 import { Services, ServiceOptions } from "../etc/service";
@@ -16,7 +17,9 @@ export function makeHostsRoutes(hostsServices: Services<HostsService>) {
         signal: controller.signal,
       });
       if (!hostsService) {
-        return res.status(404).json({ error: "Endpoint not found" }), void 0;
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Endpoint not found");
+        return;
       }
       (req as EndpointRequest).hostsService = hostsService;
       next();
@@ -27,27 +30,39 @@ export function makeHostsRoutes(hostsServices: Services<HostsService>) {
 
   hostsRoutes.get("/:endpointId/sse", async (req, res) => {
     try {
-      const { hostsService } = req as EndpointRequest;
+      const request = req as EndpointRequest;
+      if (!request.hostsService) {
+        res.status(404).json({ error: "Endpoint not found" });
+        return;
+      }
       const controller = new AbortController();
-      const sessionId = await hostsService.createSession(
-        `/${hostsService.endpointId}/messages`,
+      const sessionId = await request.hostsService.createSession(
+        `/${request.hostsService.endpointId}/messages`,
         res,
         { signal: controller.signal }
       );
 
       res.write(`event: session\ndata: ${JSON.stringify({ sessionId })}\n\n`);
-      const messageEndpoint = `/${hostsService.endpointId}/messages/${sessionId}`;
+      const messageEndpoint = `/${request.hostsService.endpointId}/messages/${sessionId}`;
       res.write(`event: endpoint\ndata: ${messageEndpoint}\n\n`);
       req.on("close", () => {
         logger.info(`SSE connection closed for session: ${sessionId}`);
         controller.abort();
-        hostsService.removeSession(sessionId);
+        request.hostsService.removeSession(sessionId);
       });
 
       logger.info(`SSE connection established for session: ${sessionId}`);
     } catch (error) {
       logger.error("Error establishing SSE connection:", error);
-      res.status(500).end();
+      if (!res.headersSent && !res.writableEnded) {
+        if (error instanceof ApiError) {
+          res.writeHead(error.statusCode, { "Content-Type": "text/plain" });
+          res.end(error.message);
+        } else {
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end("Internal server error");
+        }
+      }
     }
   });
 

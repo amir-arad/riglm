@@ -3,14 +3,11 @@ import { ApiError } from "./error";
 import { logger } from "./logger";
 
 export function notFoundHandler(
-  req: Request,
-  _res: Response,
-  next: NextFunction
+  _req: Request,
+  res: Response,
+  _next: NextFunction
 ): void {
-  const error = ApiError.notFound(
-    `Route not found: ${req.method} ${req.originalUrl}`
-  );
-  next(error);
+  res.status(404).json({ error: "Endpoint not found" });
 }
 
 export const errorHandler =
@@ -50,6 +47,13 @@ export const errorHandler =
       });
     }
 
+    // For 404 errors, return simplified response
+    if (statusCode === 404) {
+      res.status(404).json({ error: "Endpoint not found" });
+      return;
+    }
+
+    // For other errors, keep existing response format
     res.status(statusCode).json({
       status: "error",
       message: error.message,
