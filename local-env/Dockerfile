@@ -29,5 +29,10 @@ FROM ghostwheels-dev:${DEV_IMAGE_TAG}
 # Set environment variables specific to the local setup:
 # ENV MY_LOCAL_VARIABLE="some_value_for_local_only"
 
+# Add appuser to root group to access Docker socket
+USER root
+RUN addgroup appuser root
+USER appuser
+
 # For now, it can remain minimal, just inheriting the base image.
 # The primary application code is already included from the base image.

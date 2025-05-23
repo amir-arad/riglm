@@ -5,7 +5,7 @@ services:
     image: local/ghostwheels:current
     build:
       context: .
-      dockerfile: local-env/Dockerfile
+      dockerfile: Dockerfile
       args:
         - DEV_IMAGE_TAG=latest
     ports:
@@ -16,7 +16,7 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
-    user: "appuser:appgroup"
+    user: "100:0"
     networks:
       - mcp-net
 
