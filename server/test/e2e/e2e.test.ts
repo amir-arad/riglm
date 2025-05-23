@@ -235,9 +235,7 @@ describe("E2E Test", () => {
       expect.fail("Expected connection to fail with 404 error");
     } catch (error: any) {
       // SSE client formats error as "SSE error: Non-200 status code (404)"
-      expect(error.message).to.include("404");
-      // The actual error message is not propagated through the SSE client
-      // so we just verify we got the correct status code
+      expect(error.code).to.eql(404);
     }
   });
 });

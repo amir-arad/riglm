@@ -182,6 +182,7 @@ async function makeHostsService(
       serversConnections,
       close: async () => {
         logger.info("Closing app session");
+        await serversConnections.close();
       },
     };
   };

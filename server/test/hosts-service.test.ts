@@ -1,6 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { expect } from "chai";
 import sinon from "sinon";
+import { Backend } from "../src/backend.service";
 import { Services } from "../src/etc/service";
 import {
   HostsService,
@@ -17,6 +18,7 @@ function fakeTransport(sessionId: string = "test") {
 
 describe("HostsService Filter Logic", () => {
   let hostsService: null | Services<HostsService> = null;
+  let fakeBackends: null | Services<Backend> = null;
   beforeEach(() => {
     // Setup base mock config
     const mockConfig = {
@@ -50,44 +52,39 @@ describe("HostsService Filter Logic", () => {
       properties: {},
       required: [],
     };
-    const mockTools = [
-      {
-        name: "normal_tool",
-        description: "Normal tool",
-        inputSchema,
-      },
-      {
-        name: "local_tool",
-        description: "Local tool",
-        inputSchema,
-      },
-      {
-        name: "global_tool",
-        description: "Global tool",
-        inputSchema,
-      },
-    ];
+
+    fakeBackends = {
+      get: async (serverName: string) => ({
+        serverName,
+        serverConfig: mockConfig.servers[serverName],
+        tools: [
+          { name: "normal_tool", inputSchema },
+          { name: "local_tool", inputSchema },
+          { name: "global_tool", inputSchema },
+        ],
+        client: {
+          callTool: sinon.stub(),
+        } as unknown as Client,
+        close: async () => {},
+      }),
+      close: async () => [],
+    };
 
     hostsService = makeHostsServiceFactory(
-      () => ({
-        get: async (serverName: string) => ({
-          serverName,
-          serverConfig: mockConfig.servers[serverName],
-          tools: mockTools,
-          client: {
-            callTool: sinon.stub(),
-          } as unknown as Client,
-          close: async () => {},
-        }),
-        close: async () => [],
-      }),
-      { get: () => mockConfig }
+      () => {
+        if (!fakeBackends) throw new Error("fakeBackends is not initialized");
+        return fakeBackends;
+      },
+      {
+        get: () => mockConfig,
+      }
     );
   });
 
   afterEach(async () => {
     await hostsService?.close();
     hostsService = null;
+    fakeBackends = null;
   });
 
   it("should apply global filters when server has no specific filters", async () => {
@@ -129,5 +126,29 @@ describe("HostsService Filter Logic", () => {
     for (const toolName of toolNames) {
       expect(toolName).to.match(clientValidationPattern);
     }
+  });
+  it("should call serversConnections.close() when host session closes", async () => {
+    // Documentation: This test ensures that the serversConnections.close() method is called
+    // when the host session is closed. This is important for cleaning up resources,
+    // such as docker containers, and preventing memory leaks.
+
+    if (!hostsService || !fakeBackends) {
+      throw new Error("test is not initialized");
+    }
+
+    const service = await hostsService.get("endpoint1");
+
+    const mockTransport = {
+      sessionId: "test-session-id",
+      close: sinon.stub().resolves(),
+      start: sinon.stub().resolves(),
+      send: sinon.stub(),
+    };
+    const closeMethodSpy = sinon.spy(fakeBackends, "close");
+    const sessionId = await service.createSession(mockTransport);
+    const hostSession = await service.hostSessions.get(sessionId);
+    await hostSession.close();
+
+    expect(closeMethodSpy.calledOnce).to.be.true;
   });
 });
