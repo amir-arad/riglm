@@ -64,11 +64,9 @@ async function makeHostsService(
   }
 
   function namespace(serverName: string, toolName: string) {
-    return `${serverName}/${toolName}`;
+    // serverName should never have dashes, it is enforced in the config schema
+    return `${serverName.replace("-", "")}-${toolName}`;
   }
-
-  // Helper to resolve filters for a server - returns both server-specific and global filters
-  function resolveFilters(serverName: string) {}
 
   const endpoint = configManager.get().endpoints[name];
   if (!endpoint) {

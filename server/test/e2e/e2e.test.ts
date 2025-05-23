@@ -148,18 +148,18 @@ describe("E2E Test", () => {
     expect(tools).to.have.lengthOf(2);
 
     // Verify hierarchical namespacing - our server ID is prepended to the already-namespaced tool names
-    expect(tools.map((t) => t.name)).to.include("mock_server/echo");
-    expect(tools.map((t) => t.name)).to.include("mock_server/add");
+    expect(tools.map((t) => t.name)).to.include("mock_server-echo");
+    expect(tools.map((t) => t.name)).to.include("mock_server-add");
 
     // Test that the tools still work with the new hierarchical names
     const echoResult = (await client.callTool({
-      name: "mock_server/echo",
+      name: "mock_server-echo",
       arguments: { message: "test message" },
     })) as any;
     expect(echoResult.content[0].text).to.equal("test message");
 
     const addResult = (await client.callTool({
-      name: "mock_server/add",
+      name: "mock_server-add",
       arguments: { a: 5, b: 3 },
     })) as any;
     expect(addResult.content[0].text).to.equal("8");
@@ -197,16 +197,16 @@ describe("E2E Test", () => {
     );
     const { tools } = await client.listTools();
     expect(tools).to.have.lengthOf(2);
-    expect(tools.map((t) => t.name)).to.include("mock_server/echo");
-    expect(tools.map((t) => t.name)).to.include("mock_server/add");
+    expect(tools.map((t) => t.name)).to.include("mock_server-echo");
+    expect(tools.map((t) => t.name)).to.include("mock_server-add");
 
     const echoResult = (await client.callTool({
-      name: "mock_server/echo",
+      name: "mock_server-echo",
       arguments: { message: "test message from CLI server" },
     })) as any;
     expect(echoResult.content[0].text).to.equal("test message from CLI server");
     const addResult = (await client.callTool({
-      name: "mock_server/add",
+      name: "mock_server-add",
       arguments: { a: 10, b: 5 },
     })) as any;
     expect(addResult.content[0].text).to.equal("15");

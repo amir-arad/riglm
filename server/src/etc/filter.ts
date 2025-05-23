@@ -50,10 +50,10 @@ export class FilterEngine {
     return patterns.some((pattern) => {
       // Convert glob pattern to regex - handle **/ specially
       let regexPattern = pattern
-        .replace(/\*\*\//g, "__DOUBLESTAR_SLASH__") // Protect **/ during escaping
+        .replace(/\*\*-/g, "__DOUBLESTAR_DASH__") // Protect **- during escaping
         .replace(/\?/g, "__QUESTION_MARK__") // Protect ? during escaping
         .replace(/[.+^${}()|[\]\\]/g, "\\$&") // Escape regex special chars
-        .replace(/__DOUBLESTAR_SLASH__/g, "(?:.*\\/)?") // Convert **/ to optional path segments
+        .replace(/__DOUBLESTAR_DASH__/g, "(?:.*-)?") // Convert **- to optional segments using -
         .replace(/\*/g, ".*") // Convert remaining * to .*
         .replace(/__QUESTION_MARK__/g, "."); // Convert ? to .
 

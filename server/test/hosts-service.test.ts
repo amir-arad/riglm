@@ -43,7 +43,7 @@ describe("HostsService Filter Logic", () => {
           description: "Test Endpoint",
         },
       },
-      filters: ["*/global_*", "filtered/normal_*"], // Global filters
+      filters: ["*-global_*", "filtered-normal_*"], // Global filters
     };
     const inputSchema = {
       type: "object" as const,
@@ -104,7 +104,30 @@ describe("HostsService Filter Logic", () => {
 
     // Should filter out global_* tools but keep others for server1
     expect(toolNames).to.deep.equal(
-      ["unfiltered/normal_tool", "unfiltered/local_tool"].sort()
+      ["unfiltered-normal_tool", "unfiltered-local_tool"].sort()
     );
+  });
+  it("should pass client tool name validation", async () => {
+    // Documentation: This test documents a known limitation where our namespaced tool names
+    // fail client-side validation due to forward slash usage in tool names
+    // Error: "tools.0.FrontendRemoteMcpToolDefinition.name: String should match pattern '^[a-zA-Z0-9_-]*[]{,64}$'"
+
+    if (!hostsService) {
+      throw new Error("hostsService is not initialized");
+    }
+
+    const service = await hostsService.get("endpoint1");
+    const sessionId = await service.createSession(fakeTransport());
+    const appSession = await service.hostSessions.get(sessionId);
+
+    // Get the generated tool names from our current implementation
+    const toolNames = appSession.tools.map((t: any) => t.name);
+
+    // Client-side validation pattern that tools must match
+    const clientValidationPattern = /^[a-zA-Z0-9_-]*[]{0,64}$/;
+
+    for (const toolName of toolNames) {
+      expect(toolName).to.match(clientValidationPattern);
+    }
   });
 });

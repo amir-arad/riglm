@@ -38,14 +38,14 @@ describe("Tool Filtering E2E Tests", () => {
   beforeEach(async () => {
     currentConfig = {
       servers: {
-        "mock-server": {
+        mock_server: {
           url: "http://localhost:3000/sse",
         },
       },
       contexts: {
         test_context: {
           description: "Test context for filtering tests",
-          servers: ["mock-server"],
+          servers: ["mock_server"],
         },
       },
       endpoints: {
@@ -89,29 +89,29 @@ describe("Tool Filtering E2E Tests", () => {
   }
 
   it("should ignore the 'add' tool when using ignore filter", async () => {
-    const { tools } = await setupClientWithConfig(["mock-server/add"]);
+    const { tools } = await setupClientWithConfig(["mock_server-add"]);
 
-    expect(tools.find((t) => t.name === "mock-server/add")).to.be.undefined;
-    const echoTool = tools.find((t) => t.name === "mock-server/echo");
+    expect(tools.find((t) => t.name === "mock_server-add")).to.be.undefined;
+    const echoTool = tools.find((t) => t.name === "mock_server-echo");
     expect(echoTool).to.exist;
   });
 
   it("should handle multiple ignore patterns", async () => {
     const { tools } = await setupClientWithConfig([
-      "mock-server/add",
-      "mock-server/echo",
+      "mock_server-add",
+      "mock_server-echo",
     ]);
 
-    expect(tools.find((t) => t.name === "mock-server/add")).to.be.undefined;
-    expect(tools.find((t) => t.name === "mock-server/echo")).to.be.undefined;
+    expect(tools.find((t) => t.name === "mock_server-add")).to.be.undefined;
+    expect(tools.find((t) => t.name === "mock_server-echo")).to.be.undefined;
   });
 
   it("should not filter tools that don't match patterns", async () => {
-    const { tools } = await setupClientWithConfig(["mock-server/other*"]);
+    const { tools } = await setupClientWithConfig(["mock_server-other*"]);
 
-    const addTool = tools.find((t) => t.name === "mock-server/add");
+    const addTool = tools.find((t) => t.name === "mock_server-add");
     expect(addTool).to.exist;
-    const echoTool = tools.find((t) => t.name === "mock-server/echo");
+    const echoTool = tools.find((t) => t.name === "mock_server-echo");
     expect(echoTool).to.exist;
   });
 });
