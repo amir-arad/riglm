@@ -73,7 +73,6 @@ const makeBackend =
           const resolvedTransport = await Promise.resolve(transport);
 
           // Create timeout signal
-          const timeoutController = new AbortController();
           const timeoutSignal = AbortSignal.timeout(10000);
 
           // Combine with existing signal if present
@@ -128,7 +127,9 @@ const makeBackend =
       );
 
       const { tools } = await client.listTools({ signal });
-      logger.info(`Discovered tools from ${serverName}:`, tools);
+      logger.debug(
+        `Discovered ${tools.length} tools from ${serverName}: [${tools.map((tool) => tool.name).join(", ")}]`
+      );
 
       return {
         serverName,
@@ -254,7 +255,9 @@ async function connectServerImpl(serverName: string, serverConfig: Server) {
     logger.info(`Connected to server: ${serverName}`);
 
     const { tools } = await client.listTools();
-    logger.info(`Tools discovered from ${serverName}:`, tools);
+    logger.debug(
+      `Discovered ${tools.length} tools from ${serverName}: [${tools.map((tool) => tool.name).join(", ")}]`
+    );
 
     await client.close();
     logger.info(`Closed connection to server: ${serverName}`);

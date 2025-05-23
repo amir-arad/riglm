@@ -191,7 +191,7 @@ async function makeHostsService(
     const transportSession = tsm.createSession(transport, options);
     await mcpServer.connect(transport);
     const { sessionId } = transportSession;
-    logger.info(`New session ${sessionId} for endpoint ${endpoint}`);
+    logger.info(`New session ${sessionId} for endpoint ${name}`);
     const appSession = await hostSessions.get(sessionId, options);
     transportSession.addService(
       "serversConnections",
