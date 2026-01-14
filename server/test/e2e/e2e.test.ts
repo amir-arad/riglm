@@ -4,7 +4,6 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { setTimeout } from "node:timers/promises";
 import { join, dirname } from "path";
 import winston from "winston";
-import { Config } from "../../src/domain/types";
 import { AbcServer, ServerDeps } from "../../src/server";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
 import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";

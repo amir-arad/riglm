@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
 export function makeMockServer(
-  customTools?: Array<{
+  _customTools?: Array<{
     name: string;
     description?: string;
     inputSchema: Record<string, unknown>;

@@ -13,6 +13,7 @@ A unified platform where users define their LLM extensions (MCP servers, knowled
 - [x] Config consolidation - simplified 2-tier format (servers → endpoints)
 - [x] Dead code removal - removed unused RPC endpoint
 - [x] Migrated to Bun runtime (faster startup, native TypeScript, built-in test runner)
+- [x] Architecture refactor - hexagonal/ports-adapters pattern
 - [ ] Extension registry - file-based CRUD for extensions
 
 **Upcoming:** Phase 2 (Dynamic State), Phase 3 (WebSocket), Phase 4 (Client Redesign)
@@ -26,6 +27,11 @@ abc/
 ├── .claude/         # Claude Code configuration
 │   └── skills/      # Project-specific skills (mcp-testing)
 ├── server/          # Express backend - MCP aggregator
+│   └── src/         # Hexagonal architecture (ports/adapters pattern)
+│       ├── ports/       # Abstract interfaces
+│       ├── domain/      # Business logic
+│       ├── adapters/    # Implementations
+│       └── application/ # Services
 ├── client/          # React frontend - Web UI (placeholder, Phase 4)
 ├── docs/            # Documentation and plans
 └── schemas/         # Configuration examples
@@ -81,9 +87,10 @@ bun test test/filter.test.ts   # Run specific test file
 ```
 
 Test structure:
-- `test/*.test.ts` - Unit tests (config, filter, hosts-service)
-- `test/e2e/*.test.ts` - E2E tests (filtering, error handling, streams)
-- `test/fixtures/` - Mock servers for testing
+- `test/filter.test.ts` - Unit tests for filter engine
+- `test/e2e/*.test.ts` - E2E tests (happy-flow, filtering, error handling, streams, resources)
+- `test/fixtures/` - Mock MCP servers for testing
+- `test/mocks/` - Mock config and logger
 
 ## Configuration
 

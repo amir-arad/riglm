@@ -14,12 +14,11 @@ function fakeTransport(sessionId: string = "test") {
 describe("Stream Termination Tests", () => {
   let sessionManager: TransportSessionManager;
   let httpServer: ReturnType<typeof createServer>;
-  let port: number;
 
   beforeEach(async () => {
     httpServer = createServer();
     await new Promise<void>((resolve) => httpServer.listen(0, () => resolve()));
-    port = (httpServer.address() as AddressInfo).port;
+    void (httpServer.address() as AddressInfo).port;
 
     sessionManager = new TransportSessionManager();
   });

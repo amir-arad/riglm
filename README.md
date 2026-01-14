@@ -272,23 +272,27 @@ bun run lint         # Run ESLint
 
 ```
 abc/
-├── server/                 # Express backend
+├── server/                 # Express backend (hexagonal architecture)
 │   ├── src/
-│   │   ├── index.ts        # Entry point
-│   │   ├── server.ts       # Express app setup
-│   │   ├── config-manager.ts   # Configuration loading
-│   │   ├── backend.service.ts  # MCP client connections
-│   │   └── host-gateway/   # MCP server proxy
-│   │       ├── hosts.service.ts    # Server management
-│   │       ├── controller.ts       # HTTP routes
-│   │       └── transport-session-manager.ts
+│   │   ├── index.ts        # Entry point (wires adapters)
+│   │   ├── server.ts       # AbcServer (Express app)
+│   │   ├── ports/          # Abstract interfaces (contracts)
+│   │   ├── domain/         # Pure business logic (filter, types, config)
+│   │   ├── adapters/       # Concrete implementations
+│   │   │   ├── http/       # Express routes & middleware
+│   │   │   ├── logging/    # Winston adapter
+│   │   │   ├── storage/    # File config adapter
+│   │   │   └── mcp/        # MCP client/server adapters
+│   │   ├── application/    # Services (hosts, backend)
+│   │   ├── host-gateway/   # Transport session manager
+│   │   └── etc/            # Utilities
 │   └── test/               # Test files
-├── client/                 # React frontend
+├── client/                 # React frontend (placeholder, Phase 4)
 │   ├── src/
-│   │   ├── App.jsx
-│   │   ├── api/            # API integrations
-│   │   └── components/     # UI components
+│   │   ├── pages/          # Dashboard, Servers, Endpoints, etc.
+│   │   └── components/     # UI components (shadcn/ui)
 │   └── index.html
+├── docs/                   # Documentation and plans
 └── README.md
 ```
 

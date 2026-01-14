@@ -4,7 +4,6 @@ import { Server } from "http";
 import morgan from "morgan";
 import winston from "winston";
 import { makeMockServer } from "./mock-server";
-import { setTimeout } from "node:timers/promises";
 
 const logger = winston.createLogger({
   level: "info",

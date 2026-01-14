@@ -24,27 +24,36 @@ bun run typecheck    # Type check
 
 ## Architecture
 
+The server uses a **hexagonal architecture** (ports/adapters pattern) for clean separation of concerns.
+
 ### Core Components
 
-1. **AbcServer** (`src/server.ts`) - Express server with:
-   - Helmet security middleware
-   - Morgan logging
-   - Host gateway routes for MCP connections
+1. **AbcServer** (`src/server.ts`) - Express server with Helmet security and Morgan logging
 
-2. **ConfigManager** (`src/config-manager.ts`) - JSON5-based config:
-   - Two-tier structure: Servers → Endpoints
-   - Server and endpoint-specific tool filtering
-   - Runtime validation
+2. **Ports** (`src/ports/`) - Abstract interfaces:
+   - `logger.port.ts` - Logging contract
+   - `config-storage.port.ts` - Configuration storage
+   - `mcp-client.port.ts` / `mcp-server.port.ts` - MCP contracts
+   - `transport.port.ts` - Transport layer
 
-3. **Backend Service** (`src/backend.service.ts`) - MCP client connections:
-   - Local servers via stdio transport
-   - Remote servers via SSE (URLs ending in `/sse`) or HTTP transport
-   - Connection retry logic with AbortSignal support
+3. **Domain** (`src/domain/`) - Pure business logic:
+   - `types.ts` - Configuration and tool types
+   - `filter-engine.ts` - Tool filtering with glob patterns
+   - `config-resolver.ts` - Config validation
+   - `tool-aggregator.ts` - Tool namespacing/aggregation
 
-4. **Host Gateway** (`src/host-gateway/`) - MCP server proxy:
-   - **HostsService** - Manages MCP server instances per endpoint
-   - **TransportSessionManager** - Handles client session lifecycle
-   - Tool namespacing: `serverName-toolName`
+4. **Adapters** (`src/adapters/`) - Implementations:
+   - `http/` - Express routes and error middleware
+   - `logging/` - Winston logger adapter
+   - `storage/` - File-based config adapter
+   - `mcp/` - MCP SDK client/server/transport adapters
+
+5. **Application** (`src/application/`) - Services:
+   - `hosts.service.ts` - MCP server instances per endpoint
+   - `backend.service.ts` - MCP client connections per session
+
+6. **Host Gateway** (`src/host-gateway/`) - Session management:
+   - `transport-session-manager.ts` - Client session lifecycle
 
 ### Request Flow
 
@@ -108,13 +117,14 @@ LOG_LEVEL=info                         # Winston log level (debug, info, warn, e
 
 ## Key Files
 
-- `src/index.ts` - Entry point
-- `src/server.ts` - Express app setup
-- `src/config-manager.ts` - Configuration loading
-- `src/backend.service.ts` - MCP client connections
-- `src/host-gateway/hosts.service.ts` - Tool aggregation
-- `src/host-gateway/controller.ts` - HTTP routes
-- `src/etc/filter.ts` - Tool filtering engine
+- `src/index.ts` - Entry point (wires adapters to ports)
+- `src/server.ts` - AbcServer (Express app)
+- `src/domain/types.ts` - Configuration and tool types
+- `src/domain/filter-engine.ts` - Tool filtering engine
+- `src/application/hosts.service.ts` - Tool aggregation per endpoint
+- `src/application/backend.service.ts` - MCP client connections
+- `src/adapters/http/routes.ts` - HTTP routes
+- `src/host-gateway/transport-session-manager.ts` - Session lifecycle
 - `src/etc/service.ts` - Service container with cleanup
 
 ## Testing
@@ -131,9 +141,8 @@ bun test --watch                   # Watch mode
 
 | File | Purpose |
 |------|---------|
-| `test/config-manager.test.ts` | Config loading and filter resolution |
 | `test/filter.test.ts` | Glob pattern matching for tool filters |
-| `test/hosts-service.test.ts` | Session and tool aggregation |
+| `test/e2e/happy-flow.e2e.test.ts` | Basic integration flow |
 | `test/e2e/e2e.test.ts` | Full integration with mock MCP servers |
 | `test/e2e/filtering.e2e.test.ts` | Tool filtering in real requests |
 | `test/e2e/error-handling.test.ts` | Error and cleanup scenarios |
@@ -142,8 +151,14 @@ bun test --watch                   # Watch mode
 
 ### Test Fixtures
 
+- `test/fixtures/mock-server.ts` - Base mock server utilities
 - `test/fixtures/mock-cli-server.ts` - Stdio MCP server mock
 - `test/fixtures/mock-sse-server.ts` - SSE MCP server mock
+
+### Test Mocks
+
+- `test/mocks/mock-config.ts` - Configuration mocks
+- `test/mocks/mock-logger.ts` - Logger mock
 
 ## Debugging
 

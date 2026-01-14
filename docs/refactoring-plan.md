@@ -86,19 +86,27 @@ These items were identified but deferred to later phases:
 3. **Dynamic Tool Updates** - `listChanged` capability exists but not used
    - Planned for Phase 2 (extension toggle triggers notification)
 
-## Current Architecture
+## Current Architecture (Hexagonal)
 
 ```
 index.ts
   └── AbcServer
-        ├── ConfigManager (config loading)
-        ├── makeSessionBackendFactory (MCP client connections)
-        └── makeHostsServiceFactory (tool aggregation)
-              └── HostsService (per endpoint)
-                    ├── TransportSessionManager (client sessions)
-                    └── hostSessions (per client connection)
-                          └── Backend connections (per MCP server)
+        ├── FileConfigAdapter (implements ConfigStoragePort)
+        ├── WinstonAdapter (implements LoggerPort)
+        └── Application Services
+              ├── HostsService (per endpoint)
+              │     ├── TransportSessionManager (client sessions)
+              │     └── McpServerAdapter (MCP server per endpoint)
+              └── BackendService (per session)
+                    └── McpClientAdapter (per MCP server connection)
+                          └── Transport adapters (stdio/sse/http)
 ```
+
+**Layers:**
+- `ports/` - Abstract interfaces (contracts)
+- `domain/` - Pure business logic (types, filter-engine, config-resolver)
+- `adapters/` - Concrete implementations (http, logging, storage, mcp)
+- `application/` - Services (hosts.service, backend.service)
 
 ## Success Criteria Status
 

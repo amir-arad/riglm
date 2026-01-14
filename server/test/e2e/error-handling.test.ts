@@ -34,7 +34,7 @@ describe("TransportSessionManager Error Handling Tests", () => {
     const session = sessionManager.createSession(transport);
 
     // Simulate transport error
-    transport.onerror(new Error("Transport error"));
+    transport.onerror!(new Error("Transport error"));
     await setTimeout(10);
 
     expect(sessionManager.hasSession(session.sessionId)).toBe(false);

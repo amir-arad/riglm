@@ -1,7 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { FilterEngine } from "../../src/domain/filter-engine";
 import { Config } from "../../src/domain/types";
 import { AbcServer, ServerDeps } from "../../src/server";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";

@@ -247,62 +247,85 @@ useWebSocket()     // Real-time updates
 
 ---
 
-## File Structure After All Phases
+## File Structure (Current + Planned)
 
 ```
 server/
 ├── src/
-│   ├── index.ts
-│   ├── server.ts
-│   ├── config-manager.ts
-│   ├── backend.service.ts
+│   ├── index.ts                  # Entry point (wires adapters)
+│   ├── server.ts                 # AbcServer (Express app)
 │   │
-│   ├── extension-manager/        # Phase 1.4
-│   │   ├── index.ts
+│   ├── ports/                    # Interface contracts ✅
+│   │   ├── logger.port.ts
+│   │   ├── config-storage.port.ts
+│   │   ├── mcp-client.port.ts
+│   │   ├── mcp-server.port.ts
+│   │   └── transport.port.ts
+│   │
+│   ├── domain/                   # Pure business logic ✅
+│   │   ├── types.ts
+│   │   ├── error.ts
+│   │   ├── filter-engine.ts
+│   │   ├── config-resolver.ts
+│   │   └── tool-aggregator.ts
+│   │
+│   ├── adapters/                 # Implementations ✅
+│   │   ├── http/                 # Express routes
+│   │   ├── logging/              # Winston adapter
+│   │   ├── storage/              # File config adapter
+│   │   └── mcp/                  # MCP client/server adapters
+│   │
+│   ├── application/              # Services ✅
+│   │   ├── hosts.service.ts      # Modified in Phase 2
+│   │   └── backend.service.ts
+│   │
+│   ├── extension-manager/        # Phase 1.4 (planned)
 │   │   ├── extension.types.ts
 │   │   ├── extension.registry.ts
 │   │   └── extension.store.ts
 │   │
-│   ├── api/                      # Phase 2 & 3
+│   ├── api/                      # Phase 2 & 3 (planned)
 │   │   ├── management.controller.ts
 │   │   └── websocket.controller.ts
 │   │
-│   ├── host-gateway/
-│   │   ├── controller.ts
-│   │   ├── hosts.service.ts      # Modified in Phase 2
+│   ├── host-gateway/             # Session management ✅
 │   │   └── transport-session-manager.ts
 │   │
-│   └── etc/
-│       ├── config-schema.ts
-│       ├── filter.ts
-│       ├── service.ts
-│       └── ...
+│   └── etc/                      # Utilities ✅
+│       ├── env.ts
+│       ├── logger.ts
+│       └── service.ts
 │
 ├── data/
-│   └── extensions.json           # Phase 1.4
+│   └── extensions.json           # Phase 1.4 (planned)
 │
 └── test/
+    ├── filter.test.ts
+    ├── e2e/
+    ├── fixtures/
+    └── mocks/
 
 client/
 ├── src/
-│   ├── api/                      # Phase 4
+│   ├── api/                      # Phase 4 (planned)
 │   │   ├── client.ts
 │   │   ├── extensions.api.ts
 │   │   ├── sessions.api.ts
 │   │   └── websocket.ts
 │   │
-│   ├── pages/                    # Phase 4
-│   │   ├── Extensions.jsx
-│   │   ├── Sessions.jsx
-│   │   └── Profiles.jsx
+│   ├── pages/                    # Existing (placeholder)
+│   │   ├── Dashboard.jsx
+│   │   ├── Servers.jsx
+│   │   ├── Endpoints.jsx
+│   │   └── ...
 │   │
-│   ├── hooks/                    # Phase 4
+│   ├── hooks/                    # Phase 4 (planned)
 │   │   ├── useExtensions.ts
 │   │   ├── useSessions.ts
 │   │   └── useWebSocket.ts
 │   │
 │   └── components/
-│       └── ui/                   # Keep existing
+│       └── ui/                   # shadcn/ui components ✅
 │
 └── ...
 ```
@@ -312,8 +335,8 @@ client/
 ## Verification Checklist
 
 ### After Phase 1
-- [ ] `npm run typecheck` passes
-- [ ] Server starts with `npm run dev`
+- [ ] `bun run typecheck` passes
+- [ ] Server starts with `bun run dev`
 - [ ] Can connect MCP client to endpoint
 
 ### After Phase 2
