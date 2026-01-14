@@ -1,0 +1,368 @@
+# Implementation Plan: Personal AI Extension Manager
+
+## Overview
+
+Transform the MCP aggregator (Ghostwheels) into a full-featured Personal AI Extension Manager with dynamic extension control via Web UI.
+
+## Phase Summary
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| 1 | Foundation & Cleanup | In Progress |
+| 2 | Dynamic Extension State | Planned |
+| 3 | Real-Time WebSocket | Planned |
+| 4 | Client Redesign | Planned |
+
+---
+
+## Phase 1: Foundation & Cleanup
+
+**Goal:** Clean codebase ready for new features
+
+### 1.1 Workspace Cleanup ✅
+- Removed unrelated projects (FLUJO, cml, mcp-memory-zep, etc.)
+- Kept: server/, client/, docs/, schemas/
+
+### 1.2 Config Consolidation ✅
+- Simplified to 2-tier format: Servers → Endpoints
+- Removed contexts layer
+- Single `ConfigManager` class
+
+### 1.3 Dead Code Removal ✅
+- Removed unused `/rpc` endpoint
+- Removed `connectServerImpl()` and related code
+- Cleaned up imports
+
+### 1.4 Extension Registry (Next)
+
+Create file-based extension CRUD operations.
+
+**New Files:**
+```
+server/src/extension-manager/
+├── index.ts                 # Public exports
+├── extension.types.ts       # TypeScript interfaces
+├── extension.registry.ts    # CRUD operations
+└── extension.store.ts       # File-based persistence
+```
+
+**Data Model:**
+```typescript
+interface Extension {
+  id: string;
+  type: "mcp-server";
+  name: string;
+  description?: string;
+  enabled: boolean;
+  config: LocalServerConfig | RemoteServerConfig;
+  filters?: string[];
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface LocalServerConfig {
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+}
+
+interface RemoteServerConfig {
+  url: string;
+  headers?: Record<string, string>;
+}
+```
+
+**Storage:** `server/data/extensions.json`
+
+**API:**
+```typescript
+class ExtensionRegistry {
+  list(): Extension[]
+  get(id: string): Extension | undefined
+  create(ext: Omit<Extension, 'id' | 'createdAt' | 'updatedAt'>): Extension
+  update(id: string, ext: Partial<Extension>): Extension
+  delete(id: string): boolean
+  getEnabled(): Extension[]
+}
+```
+
+---
+
+## Phase 2: Dynamic Extension State
+
+**Goal:** Enable/disable extensions per session without restart
+
+### 2.1 Per-Session Extension State
+
+Modify `hosts.service.ts` to track which extensions are enabled per session.
+
+**Changes to `HostSession`:**
+```typescript
+interface HostSession {
+  sessionId: string;
+  enabledExtensions: Set<string>;  // NEW
+  tools: ToolDefinition[];
+  toolHandlers: Map<string, ToolHandler>;
+  // ...
+}
+```
+
+**New Methods:**
+```typescript
+// In HostsService
+enableExtension(sessionId: string, extensionId: string): Promise<void>
+disableExtension(sessionId: string, extensionId: string): Promise<void>
+getSessionState(sessionId: string): SessionState
+```
+
+### 2.2 Tool List Updates
+
+When extension is toggled:
+1. Update `enabledExtensions` set
+2. Recompute available tools
+3. Send MCP `notifications/tools/list_changed`
+4. Client re-fetches tool list
+
+**Key:** The MCP SDK already supports `listChanged` capability (enabled in `hosts.service.ts:85`)
+
+### 2.3 Management REST API
+
+**New File:** `server/src/api/management.controller.ts`
+
+**Endpoints:**
+```
+GET    /api/extensions              # List all extensions
+POST   /api/extensions              # Create extension
+GET    /api/extensions/:id          # Get extension
+PUT    /api/extensions/:id          # Update extension
+DELETE /api/extensions/:id          # Delete extension
+
+GET    /api/sessions                # List active sessions
+GET    /api/sessions/:id            # Get session details
+PUT    /api/sessions/:id/extensions/:extId   # Toggle extension
+DELETE /api/sessions/:id            # Force disconnect
+```
+
+---
+
+## Phase 3: Real-Time WebSocket
+
+**Goal:** Push session/extension events to Web UI
+
+### 3.1 WebSocket Server
+
+**New File:** `server/src/api/websocket.controller.ts`
+
+**Dependencies:** Add `ws` package
+
+**Events (Server → Client):**
+```typescript
+interface SessionCreatedEvent {
+  type: "session:created";
+  session: { id, endpointId, extensions: [...] };
+}
+
+interface SessionClosedEvent {
+  type: "session:closed";
+  sessionId: string;
+}
+
+interface ExtensionToggledEvent {
+  type: "extension:toggled";
+  sessionId: string;
+  extensionId: string;
+  enabled: boolean;
+}
+```
+
+**Commands (Client → Server):**
+```typescript
+interface ToggleExtensionCommand {
+  type: "toggle-extension";
+  sessionId: string;
+  extensionId: string;
+  enabled: boolean;
+}
+```
+
+### 3.2 Event Integration
+
+Emit events from:
+- `TransportSessionManager` - session lifecycle
+- `HostsService` - extension toggles
+
+---
+
+## Phase 4: Client Redesign
+
+**Goal:** New Web UI for extension and session management
+
+### 4.1 Remove Base44 Dependencies
+
+**Delete:**
+- `client/src/api/app-sdk.js`
+- `client/src/api/entities.js`
+- Base44-specific pages
+
+**Keep:**
+- `client/src/components/ui/` (shadcn components)
+- Vite + React + Tailwind setup
+
+### 4.2 New API Client
+
+**New Files:**
+```
+client/src/api/
+├── client.ts           # Base fetch client
+├── extensions.api.ts   # Extension CRUD
+├── sessions.api.ts     # Session queries
+└── websocket.ts        # Real-time connection
+```
+
+### 4.3 New Pages
+
+**Extensions Page (`/extensions`):**
+- List all defined extensions
+- Create/edit/delete extensions
+- Show enabled/disabled status
+
+**Sessions Page (`/sessions`):**
+- Live list of connected MCP clients
+- Per-session extension toggles
+- Connection info (endpoint, client name)
+
+**Profiles Page (`/profiles`):** (Optional for MVP)
+- Save/load extension configurations
+- Quick-switch between setups
+
+### 4.4 Hooks
+
+```typescript
+// client/src/hooks/
+useExtensions()    // CRUD + list
+useSessions()      // Live session list
+useWebSocket()     // Real-time updates
+```
+
+---
+
+## File Structure After All Phases
+
+```
+server/
+├── src/
+│   ├── index.ts
+│   ├── server.ts
+│   ├── config-manager.ts
+│   ├── backend.service.ts
+│   │
+│   ├── extension-manager/        # Phase 1.4
+│   │   ├── index.ts
+│   │   ├── extension.types.ts
+│   │   ├── extension.registry.ts
+│   │   └── extension.store.ts
+│   │
+│   ├── api/                      # Phase 2 & 3
+│   │   ├── management.controller.ts
+│   │   └── websocket.controller.ts
+│   │
+│   ├── host-gateway/
+│   │   ├── controller.ts
+│   │   ├── hosts.service.ts      # Modified in Phase 2
+│   │   └── transport-session-manager.ts
+│   │
+│   └── etc/
+│       ├── config-schema.ts
+│       ├── filter.ts
+│       ├── service.ts
+│       └── ...
+│
+├── data/
+│   └── extensions.json           # Phase 1.4
+│
+└── test/
+
+client/
+├── src/
+│   ├── api/                      # Phase 4
+│   │   ├── client.ts
+│   │   ├── extensions.api.ts
+│   │   ├── sessions.api.ts
+│   │   └── websocket.ts
+│   │
+│   ├── pages/                    # Phase 4
+│   │   ├── Extensions.jsx
+│   │   ├── Sessions.jsx
+│   │   └── Profiles.jsx
+│   │
+│   ├── hooks/                    # Phase 4
+│   │   ├── useExtensions.ts
+│   │   ├── useSessions.ts
+│   │   └── useWebSocket.ts
+│   │
+│   └── components/
+│       └── ui/                   # Keep existing
+│
+└── ...
+```
+
+---
+
+## Verification Checklist
+
+### After Phase 1
+- [ ] `npm run typecheck` passes
+- [ ] Server starts with `npm run dev`
+- [ ] Can connect MCP client to endpoint
+
+### After Phase 2
+- [ ] REST API returns extension list
+- [ ] Can toggle extension via API
+- [ ] Tool list updates after toggle
+
+### After Phase 3
+- [ ] WebSocket connects from browser
+- [ ] Session events appear in real-time
+- [ ] Toggle via WebSocket works
+
+### After Phase 4
+- [ ] Web UI loads at localhost:8080
+- [ ] Extensions page shows list
+- [ ] Sessions page shows live connections
+- [ ] Toggle switches work end-to-end
+
+---
+
+## Dependencies to Add
+
+### Server (Phase 3)
+```json
+{
+  "dependencies": {
+    "ws": "^8.x"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.x"
+  }
+}
+```
+
+### Client (Phase 4)
+```json
+{
+  "dependencies": {
+    // Remove: "b44-sdk" or similar Base44 packages
+    // Keep: react, tailwind, shadcn components
+  }
+}
+```
+
+---
+
+## Risk Mitigation
+
+1. **Test suite broken** - Fix chai ESM issue before Phase 2
+2. **MCP client compatibility** - Test with Claude Code, Cursor, Cline
+3. **WebSocket reliability** - Add reconnection logic in client
+4. **State sync** - Handle race conditions in toggle operations

@@ -1,18 +1,28 @@
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { expect } from "chai";
 import { setTimeout } from "node:timers/promises";
+import { join, dirname } from "path";
 import winston from "winston";
-import { Config } from "../../src/etc/config-schema";
-import { AbcServer, ServerOptons } from "../../src/server";
+import { Config } from "../../src/domain/types";
+import { AbcServer, ServerDeps } from "../../src/server";
+import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
+import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
+import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
+import { createMockConfigStorage } from "../mocks/mock-config";
 import { mocSseServer } from "../fixtures/mock-sse-server";
+
+// Get the absolute path to the test fixtures directory
+const fixturesDir = join(dirname(import.meta.path), "../fixtures");
 
 describe("E2E Test", () => {
   let mockBackend: ReturnType<typeof mocSseServer> | null = null;
   let client: Client | null = null;
   let uut: AbcServer | null = null;
-  let currentConfig: Config | null = null;
-  const logger = winston.createLogger({
+  let mockConfig: ReturnType<typeof createMockConfigStorage> | null = null;
+
+  // Create winston logger with LoggerPort-compatible interface
+  const winstonLogger = winston.createLogger({
     level: "info",
     format: winston.format.combine(
       winston.format.colorize(),
@@ -26,30 +36,42 @@ describe("E2E Test", () => {
     ],
   });
 
-  const mockOptions = {
-    env: {
-      port: 56665,
-      isProduction: false,
-    },
-    config: {
-      get: () => {
-        if (!currentConfig) {
-          throw new Error("No config loaded");
-        }
-        return currentConfig;
+  // Wrap winston to match LoggerPort interface
+  const logger = {
+    info: (message: string, ...meta: unknown[]) => winstonLogger.info(message, ...meta),
+    warn: (message: string, ...meta: unknown[]) => winstonLogger.warn(message, ...meta),
+    error: (message: string, ...meta: unknown[]) => winstonLogger.error(message, ...meta),
+    debug: (message: string, ...meta: unknown[]) => winstonLogger.debug(message, ...meta),
+    child: (_meta: Record<string, unknown>) => logger,
+  };
+
+  // Create factories (use real adapters for E2E tests)
+  const clientFactory = new McpClientFactoryAdapter();
+  const serverFactory = new McpServerFactoryAdapter();
+  const transportFactory = new ClientTransportFactoryAdapter();
+
+  function createServerDeps(config: ReturnType<typeof createMockConfigStorage>): ServerDeps {
+    return {
+      env: {
+        port: 56665,
+        isProduction: false,
       },
-    },
-    logger,
-  } satisfies ServerOptons;
+      config,
+      clientFactory,
+      serverFactory,
+      transportFactory,
+      logger,
+    };
+  }
 
   const cleanup = async (
     name: string,
-    cleanup: Promise<void>,
+    cleanupPromise: Promise<void>,
     timeoutMs: number = 2000
   ) => {
     try {
       await Promise.race([
-        cleanup,
+        cleanupPromise,
         setTimeout(timeoutMs, () => {
           throw new Error(`${name} cleanup timeout`);
         }),
@@ -63,11 +85,12 @@ describe("E2E Test", () => {
 
   beforeEach(async () => {
     mockBackend = mocSseServer();
+    mockConfig = createMockConfigStorage();
     client = new Client({
       name: "test-client",
       version: "1.0.0",
     });
-    uut = new AbcServer(mockOptions);
+    uut = new AbcServer(createServerDeps(mockConfig));
   });
 
   afterEach(async function () {
@@ -88,7 +111,7 @@ describe("E2E Test", () => {
     }
   });
 
-  it("sanity (sse drivers and mocks working)", async () => {
+  test("sanity (sse drivers and mocks working)", async () => {
     if (!client || !mockBackend) {
       throw new Error("Test is not initialized");
     }
@@ -97,47 +120,41 @@ describe("E2E Test", () => {
       new SSEClientTransport(new URL("/sse", `http://localhost:3000`))
     );
     const { tools } = await client.listTools();
-    expect(tools).to.have.lengthOf(2);
-    expect(tools.map((t) => t.name)).to.include("echo");
-    expect(tools.map((t) => t.name)).to.include("add");
+    expect(tools).toHaveLength(2);
+    expect(tools.map((t) => t.name)).toContain("echo");
+    expect(tools.map((t) => t.name)).toContain("add");
     const echoResult = (await client.callTool({
       name: "echo",
       arguments: { message: "test message" },
     })) as any;
-    expect(echoResult.content[0].text).to.equal("test message");
+    expect(echoResult.content[0].text).toBe("test message");
     const addResult = (await client.callTool({
       name: "add",
       arguments: { a: 5, b: 3 },
     })) as any;
-    expect(addResult.content[0].text).to.equal("8");
+    expect(addResult.content[0].text).toBe("8");
   });
 
-  it("should support hierarchical namespacing of tools", async () => {
-    if (!client || !mockBackend || !uut) {
+  test("should support hierarchical namespacing of tools", async () => {
+    if (!client || !mockBackend || !uut || !mockConfig) {
       throw new Error("Test is not initialized");
     }
 
     mockBackend = mocSseServer();
     await mockBackend.listen(3000);
-    currentConfig = {
+    mockConfig.setConfig({
       servers: {
         mock_server: {
           url: "http://localhost:3000/sse",
         },
       },
-      contexts: {
-        test_context: {
-          description: "Test context for e2e tests",
-          servers: ["mock_server"],
-        },
-      },
       endpoints: {
         test_endpoint: {
           description: "Test endpoint for e2e tests",
-          contexts: ["test_context"],
+          servers: ["mock_server"],
         },
       },
-    };
+    });
     await uut.start();
     await client.connect(
       new SSEClientTransport(
@@ -145,50 +162,44 @@ describe("E2E Test", () => {
       )
     );
     const { tools } = await client.listTools();
-    expect(tools).to.have.lengthOf(2);
+    expect(tools).toHaveLength(2);
 
     // Verify hierarchical namespacing - our server ID is prepended to the already-namespaced tool names
-    expect(tools.map((t) => t.name)).to.include("mock_server-echo");
-    expect(tools.map((t) => t.name)).to.include("mock_server-add");
+    expect(tools.map((t) => t.name)).toContain("mock_server-echo");
+    expect(tools.map((t) => t.name)).toContain("mock_server-add");
 
     // Test that the tools still work with the new hierarchical names
     const echoResult = (await client.callTool({
       name: "mock_server-echo",
       arguments: { message: "test message" },
     })) as any;
-    expect(echoResult.content[0].text).to.equal("test message");
+    expect(echoResult.content[0].text).toBe("test message");
 
     const addResult = (await client.callTool({
       name: "mock_server-add",
       arguments: { a: 5, b: 3 },
     })) as any;
-    expect(addResult.content[0].text).to.equal("8");
+    expect(addResult.content[0].text).toBe("8");
   });
 
-  it("should expose and proxy tools from local CLI servers", async () => {
-    if (!client || !uut) {
+  test("should expose and proxy tools from local CLI servers", async () => {
+    if (!client || !uut || !mockConfig) {
       throw new Error("Test is not initialized");
     }
-    currentConfig = {
+    mockConfig.setConfig({
       servers: {
         mock_server: {
-          command: "node",
-          args: ["-r", "ts-node/register", "test/fixtures/mock-cli-server.ts"],
-        },
-      },
-      contexts: {
-        test_context: {
-          description: "Test context for e2e tests",
-          servers: ["mock_server"],
+          command: "bun",
+          args: ["run", join(fixturesDir, "mock-cli-server.ts")],
         },
       },
       endpoints: {
         test_endpoint: {
           description: "Test endpoint for e2e tests",
-          contexts: ["test_context"],
+          servers: ["mock_server"],
         },
       },
-    };
+    });
     await uut.start();
     await client.connect(
       new SSEClientTransport(
@@ -196,32 +207,31 @@ describe("E2E Test", () => {
       )
     );
     const { tools } = await client.listTools();
-    expect(tools).to.have.lengthOf(2);
-    expect(tools.map((t) => t.name)).to.include("mock_server-echo");
-    expect(tools.map((t) => t.name)).to.include("mock_server-add");
+    expect(tools).toHaveLength(2);
+    expect(tools.map((t) => t.name)).toContain("mock_server-echo");
+    expect(tools.map((t) => t.name)).toContain("mock_server-add");
 
     const echoResult = (await client.callTool({
       name: "mock_server-echo",
       arguments: { message: "test message from CLI server" },
     })) as any;
-    expect(echoResult.content[0].text).to.equal("test message from CLI server");
+    expect(echoResult.content[0].text).toBe("test message from CLI server");
     const addResult = (await client.callTool({
       name: "mock_server-add",
       arguments: { a: 10, b: 5 },
     })) as any;
-    expect(addResult.content[0].text).to.equal("15");
+    expect(addResult.content[0].text).toBe("15");
   });
 
-  it("should return 404 for non-existent endpoints", async () => {
-    if (!client || !uut) {
+  test("should return 404 for non-existent endpoints", async () => {
+    if (!client || !uut || !mockConfig) {
       throw new Error("Test is not initialized");
     }
 
-    currentConfig = {
+    mockConfig.setConfig({
       servers: {},
-      contexts: {},
       endpoints: {},
-    };
+    });
 
     await uut.start();
 
@@ -232,10 +242,10 @@ describe("E2E Test", () => {
         )
       );
       // If we reach here, the test should fail as we expect a 404 error
-      expect.fail("Expected connection to fail with 404 error");
+      throw new Error("Expected connection to fail with 404 error");
     } catch (error: any) {
       // SSE client formats error as "SSE error: Non-200 status code (404)"
-      expect(error.code).to.eql(404);
+      expect(error.code).toBe(404);
     }
   });
 });

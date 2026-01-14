@@ -1,0 +1,39 @@
+{
+  // Define MCP servers (local or remote)
+  "servers": {
+    "github": {
+      "url": "http://localhost:3001/sse",
+      "description": "GitHub MCP server for repository operations",
+      "filters": ["*_dangerous", "*_admin"]  // Server-specific filters
+    },
+    "filesystem": {
+      "command": "node",
+      "args": ["./mcp-filesystem-server.js"],
+      "env": { 
+        "ALLOWED_PATHS": "/home/user/projects"
+      },
+      "description": "Local filesystem MCP server"
+    },
+    "calculator": {
+      "url": "http://localhost:3002",  // Uses new HTTP transport
+      "description": "Calculator service"
+    }
+  },
+  
+  // Define endpoints that expose servers directly
+  "endpoints": {
+    "development": {
+      "servers": ["github", "filesystem", "calculator"],
+      "description": "Development tools endpoint",
+      "filters": ["*_debug"]  // Endpoint-specific filters
+    },
+    "production": {
+      "servers": ["github", "calculator"],
+      "description": "Production endpoint with limited tools",
+      "apiKey": "prod-api-key-123"
+    }
+  },
+  
+  // Global tool filters (lowest priority)
+  "filters": ["*_internal", "*_deprecated"]
+}

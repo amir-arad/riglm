@@ -1,12 +1,21 @@
-import { expect } from "chai";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { setTimeout } from "timers/promises";
 import { TransportSessionManager } from "../../src/host-gateway/transport-session-manager";
+import { TransportPort } from "../../src/ports/transport.port";
 
-function fakeTransport(sessionId: string = "test") {
+function fakeTransport(sessionId: string = "test"): TransportPort {
+  let _onerror: ((error: Error) => void) | undefined;
+  let _onclose: (() => void) | undefined;
+
   return {
     sessionId,
+    start: async () => {},
     close: async () => {},
-  } as any;
+    get onerror() { return _onerror; },
+    set onerror(handler) { _onerror = handler; },
+    get onclose() { return _onclose; },
+    set onclose(handler) { _onclose = handler; },
+  };
 }
 
 describe("TransportSessionManager Error Handling Tests", () => {
@@ -20,7 +29,7 @@ describe("TransportSessionManager Error Handling Tests", () => {
     await sessionManager?.close();
   });
 
-  it("should handle transport errors", async () => {
+  test("should handle transport errors", async () => {
     const transport = fakeTransport();
     const session = sessionManager.createSession(transport);
 
@@ -28,10 +37,10 @@ describe("TransportSessionManager Error Handling Tests", () => {
     transport.onerror(new Error("Transport error"));
     await setTimeout(10);
 
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should handle errors during service cleanup", async () => {
+  test("should handle errors during service cleanup", async () => {
     const session = sessionManager.createSession(fakeTransport());
 
     session.addService("failing-service", {
@@ -41,18 +50,18 @@ describe("TransportSessionManager Error Handling Tests", () => {
     });
 
     await session.close();
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should handle abort signal", async () => {
+  test("should handle abort signal", async () => {
     const controller = new AbortController();
     const session = sessionManager.createSession(fakeTransport(), controller);
     controller.abort();
     await setTimeout(10);
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should handle concurrent errors from multiple sessions", async () => {
+  test("should handle concurrent errors from multiple sessions", async () => {
     const sessions = [
       sessionManager.createSession(fakeTransport("1")),
       sessionManager.createSession(fakeTransport("2")),
@@ -70,10 +79,10 @@ describe("TransportSessionManager Error Handling Tests", () => {
     // Wait for error handling
     await setTimeout(100);
 
-    expect(sessionManager.getActiveSessions()).to.equal(0);
+    expect(sessionManager.getActiveSessions()).toBe(0);
   });
 
-  it("should handle errors during cleanup of sessions", async () => {
+  test("should handle errors during cleanup of sessions", async () => {
     const controller = new AbortController();
     const session = sessionManager.createSession(fakeTransport(), controller);
 
@@ -87,10 +96,10 @@ describe("TransportSessionManager Error Handling Tests", () => {
 
     controller.abort();
     await setTimeout(50);
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should handle errors during manager shutdown", async () => {
+  test("should handle errors during manager shutdown", async () => {
     const controller = new AbortController();
     const session = sessionManager.createSession(fakeTransport(), controller);
 
@@ -107,6 +116,6 @@ describe("TransportSessionManager Error Handling Tests", () => {
     });
 
     await sessionManager.close();
-    expect(sessionManager.getActiveSessions()).to.equal(0);
+    expect(sessionManager.getActiveSessions()).toBe(0);
   });
 });

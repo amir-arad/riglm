@@ -1,4 +1,4 @@
-import { expect } from "chai";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { createServer } from "http";
 import { AddressInfo } from "net";
 import { TransportSessionManager } from "../../src/host-gateway/transport-session-manager";
@@ -29,11 +29,11 @@ describe("Stream Termination Tests", () => {
     await new Promise<void>((resolve) => httpServer?.close(() => resolve()));
   });
 
-  it("should terminate stream when client disconnects", async () => {
+  test("should terminate stream when client disconnects", async () => {
     const controller = new AbortController();
     const session = sessionManager.createSession(fakeTransport(), controller);
 
-    expect(sessionManager.hasSession(session.sessionId)).to.be.true;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(true);
 
     // Simulate client disconnect
     controller.abort();
@@ -41,21 +41,21 @@ describe("Stream Termination Tests", () => {
     // Wait for cleanup
     await setTimeout(100);
 
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should handle server-initiated aborts", async () => {
+  test("should handle server-initiated aborts", async () => {
     const controller = new AbortController();
     const session = sessionManager.createSession(fakeTransport(), controller);
-    expect(sessionManager.hasSession(session.sessionId)).to.be.true;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(true);
 
     // Simulate server-initiated abort
     await sessionManager.removeSession(session.sessionId);
 
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should terminate stream on timeout", async () => {
+  test("should terminate stream on timeout", async () => {
     const controller = new AbortController();
     const session = sessionManager.createSession(fakeTransport(), controller);
     const sessionId = session.sessionId;
@@ -66,27 +66,27 @@ describe("Stream Termination Tests", () => {
     // Trigger cleanup
     await (sessionManager as any).cleanupInactiveSessions();
 
-    expect(sessionManager.hasSession(sessionId)).to.be.false;
+    expect(sessionManager.hasSession(sessionId)).toBe(false);
   });
 
-  it("should handle concurrent stream terminations", async () => {
+  test("should handle concurrent stream terminations", async () => {
     const sessions = await Promise.all([
       sessionManager.createSession(fakeTransport("S-1")),
       sessionManager.createSession(fakeTransport("S-2")),
       sessionManager.createSession(fakeTransport("S-3")),
     ]);
 
-    expect(sessionManager.getActiveSessions()).to.equal(3);
+    expect(sessionManager.getActiveSessions()).toBe(3);
 
     // Terminate streams concurrently
     await Promise.all(
       sessions.map((session) => sessionManager.removeSession(session.sessionId))
     );
 
-    expect(sessionManager.getActiveSessions()).to.equal(0);
+    expect(sessionManager.getActiveSessions()).toBe(0);
   });
 
-  it("should cleanup resources when abort signal is triggered", async () => {
+  test("should cleanup resources when abort signal is triggered", async () => {
     const controller = new AbortController();
     const session = sessionManager.createSession(fakeTransport(), controller);
     let servicesClosed = false;
@@ -104,7 +104,7 @@ describe("Stream Termination Tests", () => {
     // Wait for cleanup
     await setTimeout(100);
 
-    expect(servicesClosed).to.be.true;
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(servicesClosed).toBe(true);
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 });

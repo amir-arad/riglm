@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
     "target": "es2018",
-    "module": "NodeNext",
+    "module": "ESNext",
     "lib": ["es2018"],
+    "types": ["bun-types"],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "sourceMap": true,
     "declaration": true,
@@ -27,6 +27,6 @@
   "ts-node": {
     "transpileOnly": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -1,9 +1,13 @@
-import { expect } from "chai";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { FilterEngine } from "../../src/etc/filter";
-import { Config } from "../../src/etc/config-schema";
-import { AbcServer, ServerOptons } from "../../src/server";
+import { FilterEngine } from "../../src/domain/filter-engine";
+import { Config } from "../../src/domain/types";
+import { AbcServer, ServerDeps } from "../../src/server";
+import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
+import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
+import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
+import { createMockConfigStorage } from "../mocks/mock-config";
 import { mocSseServer } from "../fixtures/mock-sse-server";
 import winston from "winston";
 
@@ -11,56 +15,62 @@ describe("Tool Filtering E2E Tests", () => {
   let mockBackend: ReturnType<typeof mocSseServer> | null = null;
   let client: Client | null = null;
   let server: AbcServer | null = null;
-  let currentConfig: Config | null = null;
+  let mockConfig: ReturnType<typeof createMockConfigStorage> | null = null;
 
-  const logger = winston.createLogger({
+  const winstonLogger = winston.createLogger({
     level: "info",
     format: winston.format.simple(),
     transports: [new winston.transports.Console()],
   });
 
-  const mockOptions = {
-    env: {
-      port: 56666,
-      isProduction: false,
-    },
-    config: {
-      get: () => {
-        if (!currentConfig) {
-          throw new Error("No config loaded");
-        }
-        return currentConfig;
+  // Wrap winston to match LoggerPort interface
+  const logger = {
+    info: (message: string, ...meta: unknown[]) => winstonLogger.info(message, ...meta),
+    warn: (message: string, ...meta: unknown[]) => winstonLogger.warn(message, ...meta),
+    error: (message: string, ...meta: unknown[]) => winstonLogger.error(message, ...meta),
+    debug: (message: string, ...meta: unknown[]) => winstonLogger.debug(message, ...meta),
+    child: (_meta: Record<string, unknown>) => logger,
+  };
+
+  // Create factories (use real adapters for E2E tests)
+  const clientFactory = new McpClientFactoryAdapter();
+  const serverFactory = new McpServerFactoryAdapter();
+  const transportFactory = new ClientTransportFactoryAdapter();
+
+  function createServerDeps(config: ReturnType<typeof createMockConfigStorage>): ServerDeps {
+    return {
+      env: {
+        port: 56666,
+        isProduction: false,
       },
-    },
-    logger,
-  } satisfies ServerOptons;
+      config,
+      clientFactory,
+      serverFactory,
+      transportFactory,
+      logger,
+    };
+  }
 
   beforeEach(async () => {
-    currentConfig = {
+    mockConfig = createMockConfigStorage({
       servers: {
         mock_server: {
           url: "http://localhost:3000/sse",
         },
       },
-      contexts: {
-        test_context: {
-          description: "Test context for filtering tests",
-          servers: ["mock_server"],
-        },
-      },
       endpoints: {
         test_endpoint: {
           description: "Test endpoint for filtering tests",
-          contexts: ["test_context"],
+          servers: ["mock_server"],
         },
       },
-    };
+    });
     mockBackend = mocSseServer();
     client = new Client({
       name: "test-client",
       version: "1.0.0",
     });
-    server = new AbcServer(mockOptions);
+    server = new AbcServer(createServerDeps(mockConfig));
     await mockBackend.listen(3000);
     await server.start();
   });
@@ -72,14 +82,19 @@ describe("Tool Filtering E2E Tests", () => {
     server = null;
     await mockBackend?.close();
     mockBackend = null;
-    currentConfig = null;
+    mockConfig = null;
   });
 
   async function setupClientWithConfig(filterConfig: Config["filters"]) {
-    if (!client || !server || !currentConfig) {
+    if (!client || !server || !mockConfig) {
       throw new Error("Test is not initialized");
     }
-    currentConfig.filters = filterConfig;
+    // Update config with filters
+    const currentConf = mockConfig.get();
+    mockConfig.setConfig({
+      ...currentConf,
+      filters: filterConfig,
+    });
     await client.connect(
       new SSEClientTransport(
         new URL("/test_endpoint/sse", `http://localhost:${server.port}`)
@@ -88,30 +103,30 @@ describe("Tool Filtering E2E Tests", () => {
     return await client.listTools();
   }
 
-  it("should ignore the 'add' tool when using ignore filter", async () => {
+  test("should ignore the 'add' tool when using ignore filter", async () => {
     const { tools } = await setupClientWithConfig(["mock_server-add"]);
 
-    expect(tools.find((t) => t.name === "mock_server-add")).to.be.undefined;
+    expect(tools.find((t) => t.name === "mock_server-add")).toBeUndefined();
     const echoTool = tools.find((t) => t.name === "mock_server-echo");
-    expect(echoTool).to.exist;
+    expect(echoTool).toBeDefined();
   });
 
-  it("should handle multiple ignore patterns", async () => {
+  test("should handle multiple ignore patterns", async () => {
     const { tools } = await setupClientWithConfig([
       "mock_server-add",
       "mock_server-echo",
     ]);
 
-    expect(tools.find((t) => t.name === "mock_server-add")).to.be.undefined;
-    expect(tools.find((t) => t.name === "mock_server-echo")).to.be.undefined;
+    expect(tools.find((t) => t.name === "mock_server-add")).toBeUndefined();
+    expect(tools.find((t) => t.name === "mock_server-echo")).toBeUndefined();
   });
 
-  it("should not filter tools that don't match patterns", async () => {
+  test("should not filter tools that don't match patterns", async () => {
     const { tools } = await setupClientWithConfig(["mock_server-other*"]);
 
     const addTool = tools.find((t) => t.name === "mock_server-add");
-    expect(addTool).to.exist;
+    expect(addTool).toBeDefined();
     const echoTool = tools.find((t) => t.name === "mock_server-echo");
-    expect(echoTool).to.exist;
+    expect(echoTool).toBeDefined();
   });
 });

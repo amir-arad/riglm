@@ -1,8 +1,15 @@
-import { expect } from "chai";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { createServer } from "http";
 import { AddressInfo } from "net";
 import { setTimeout } from "timers/promises";
 import { TransportSessionManager } from "../../src/host-gateway/transport-session-manager";
+
+function fakeTransport(sessionId: string = "test") {
+  return {
+    sessionId,
+    close: async () => {},
+  } as any;
+}
 
 describe("Resource Deallocation Tests", () => {
   let sessionManager: TransportSessionManager;
@@ -23,7 +30,7 @@ describe("Resource Deallocation Tests", () => {
     await new Promise<void>((resolve) => httpServer?.close(() => resolve()));
   });
 
-  it("should cleanup all services on session close", async () => {
+  test("should cleanup all services on session close", async () => {
     const services = Array.from({ length: 3 }, (_, i) => {
       let closed = false;
       return {
@@ -42,11 +49,11 @@ describe("Resource Deallocation Tests", () => {
     });
     await session.close();
     services.forEach(({ service }) => {
-      expect(service.isClosed()).to.be.true;
+      expect(service.isClosed()).toBe(true);
     });
   });
 
-  it("should handle cleanup of failed services", async () => {
+  test("should handle cleanup of failed services", async () => {
     const goodService = {
       close: async () => {},
     };
@@ -63,10 +70,10 @@ describe("Resource Deallocation Tests", () => {
 
     // Session close should complete despite service failure
     await session.close();
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should cleanup sessions on manager close", async () => {
+  test("should cleanup sessions on manager close", async () => {
     // Create multiple sessions
     const sessions = [
       sessionManager.createSession(fakeTransport("1")),
@@ -74,20 +81,20 @@ describe("Resource Deallocation Tests", () => {
       sessionManager.createSession(fakeTransport("3")),
     ];
 
-    expect(sessionManager.getActiveSessions()).to.equal(3);
+    expect(sessionManager.getActiveSessions()).toBe(3);
 
     // Close session manager
     await sessionManager.close();
 
     // Verify all sessions were cleaned up
     sessions.forEach((session) => {
-      expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+      expect(sessionManager.hasSession(session.sessionId)).toBe(false);
     });
 
-    expect(sessionManager.getActiveSessions()).to.equal(0);
+    expect(sessionManager.getActiveSessions()).toBe(0);
   });
 
-  it("should handle concurrent service cleanup", async () => {
+  test("should handle concurrent service cleanup", async () => {
     const session = sessionManager.createSession(fakeTransport());
 
     // Add services with varying cleanup times
@@ -105,24 +112,17 @@ describe("Resource Deallocation Tests", () => {
     const duration = Date.now() - start;
 
     // Should take at least the longest of all timeouts
-    expect(duration).to.be.at.least(50 * 3);
-    expect(sessionManager.hasSession(session.sessionId)).to.be.false;
+    expect(duration).toBeGreaterThanOrEqual(50 * 3);
+    expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
-  it("should cleanup interval timer on manager close", async () => {
+  test("should cleanup interval timer on manager close", async () => {
     const initialIntervalId = (sessionManager as any).intervalId;
-    expect(initialIntervalId).to.not.be.null;
+    expect(initialIntervalId).not.toBeNull();
 
     await sessionManager.close();
 
     const finalIntervalId = (sessionManager as any).intervalId;
-    expect(finalIntervalId).to.be.null;
+    expect(finalIntervalId).toBeNull();
   });
 });
-
-function fakeTransport(sessionId: string = "test") {
-  return {
-    sessionId,
-    close: async () => {},
-  } as any;
-}

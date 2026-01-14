@@ -1,150 +1,119 @@
 # Refactoring Plan: State Management and Cleanup
 
-## Current Issues
-1. Global state in configuration management
-2. Stateful modules without proper lifecycle management
-3. No clean way to tear down and recreate server instances
-4. Potential state leakage between tests
+> **Status: COMPLETED** - This plan was executed. See notes below for what was done.
 
-## Objectives
-1. Enable proper cleanup of server resources
-2. Make testing more reliable
-3. Allow server recreation with different configurations
-4. Improve code maintainability
+## Original Objectives ✅
 
-## Implementation Plan
+1. ✅ Enable proper cleanup of server resources
+2. ✅ Make testing more reliable
+3. ✅ Allow server recreation with different configurations
+4. ✅ Improve code maintainability
 
-### 1. Configuration Management
-- Convert `config.ts` from global state to a class:
+## What Was Implemented
+
+### 1. ConfigManager Class ✅
+
+Created `src/config-manager.ts`:
 ```typescript
-export class ConfigManager {
-  private currentConfig: Config | null = null;
-  
+export class ConfigManager implements ServerConfigurator {
+  private config: Config | null = null;
+
   constructor(private configPath: string) {}
-  
-  load(): Config { /* ... */ }
-  get(): Config { /* ... */ }
-  reload(): boolean { /* ... */ }
+
+  load(): Config { /* loads and validates JSON5 config */ }
+  get(): Config { /* returns current config */ }
+  getFilters(serverId?, endpointId?): Filters { /* filter resolution */ }
+  reload(): boolean { /* hot reload support */ }
 }
 ```
 
-### 2. Server Instance Management
-- Create a main server class that encapsulates all components:
+### 2. AbcServer Class ✅
+
+Created `src/server.ts`:
 ```typescript
-export class McpProxyServer {
-  private config: ConfigManager;
-  private endpointServices: EndpointServiceManager;
-  private httpServer: http.Server;
-  
-  constructor(configPath: string) {
-    this.config = new ConfigManager(configPath);
-  }
-  
-  async start(): Promise<void> { /* ... */ }
-  async stop(): Promise<void> { /* ... */ }
+export class AbcServer {
+  private httpServer: Server | null = null;
+  private hostsServices: Services<HostsService> | null = null;
+
+  constructor(private opts: ServerOptons) {}
+
+  async start(): Promise<void> { /* starts Express server */ }
+  async close(): Promise<void> { /* graceful shutdown */ }
 }
 ```
 
-### 3. Endpoint Service Management
-- Convert `endpoint.service.ts` to a proper manager class:
+### 3. Service Container Pattern ✅
+
+Created `src/etc/service.ts`:
 ```typescript
-export class EndpointServiceManager {
-  private services: Map<string, EndpointService>;
-  
-  constructor(private config: ConfigManager) {}
-  
-  initialize(): void { /* ... */ }
-  cleanup(): Promise<void> { /* ... */ }
+export function makeServicesContainer<T>(
+  factory: ServiceFactory<T>,
+  name: string
+): Services<T> {
+  // Lazy initialization
+  // Automatic cleanup
+  // AbortSignal propagation
 }
 ```
 
-### 4. Session Management
-- Enhance `TransportSessionManager` with better cleanup:
+### 4. Session Management ✅
+
+`TransportSessionManager` in `src/host-gateway/transport-session-manager.ts`:
+- Per-session isolation
+- Proper cleanup on disconnect
+- AbortSignal integration
+
+### 5. Graceful Shutdown ✅
+
+In `src/index.ts`:
 ```typescript
-export class TransportSessionManager {
-  async cleanup(): Promise<void> {
-    // Close all active sessions
-    // Clean up resources
-    // Reset state
-  }
-}
-```
-
-## Migration Steps
-
-1. **Create New Classes**
-   - Implement new class-based versions of each component
-   - Add proper lifecycle methods (init, cleanup)
-   - Keep existing code functional during migration
-
-2. **Update Dependencies**
-   - Modify dependency injection to use new classes
-   - Update service creation/cleanup flows
-   - Ensure proper resource management
-
-3. **Update Main Application**
-   - Create new application entry point using `McpProxyServer`
-   - Implement graceful shutdown
-   - Handle configuration reloading
-
-4. **Update Tests**
-   - Modify E2E tests to use new server class
-   - Add cleanup calls in test teardown
-   - Add tests for server lifecycle management
-
-## Example Usage
-
-```typescript
-// Application
-const server = new McpProxyServer("config.json");
-await server.start();
-
-// Handle shutdown
 process.on("SIGINT", async () => {
-  await server.stop();
+  await server.close();
   process.exit(0);
 });
-
-// Testing
-describe("E2E Tests", () => {
-  let server: McpProxyServer;
-  
-  beforeEach(async () => {
-    server = new McpProxyServer("test-config.json");
-    await server.start();
-  });
-  
-  afterEach(async () => {
-    await server.stop();
-  });
-  
-  it("should handle requests", async () => {
-    // Test code here
-  });
-});
 ```
 
-## Benefits
+## Remaining Items (Now in Phase 2+)
 
-1. **Testing**
-   - Clean state between tests
-   - No resource leaks
-   - More reliable test execution
+These items were identified but deferred to later phases:
 
-2. **Development**
-   - Better error handling
-   - Clearer component lifecycles
-   - Easier configuration management
+1. **Configuration Hot Reload** - `reload()` exists but not wired to signal
+   - Planned for Phase 2 (dynamic extension state)
 
-3. **Production**
-   - Proper cleanup on shutdown
-   - Better resource management
-   - More reliable configuration reloading
+2. **Test Reliability** - Tests have chai ESM issue
+   - Need to fix before Phase 2
 
-## Success Criteria
+3. **Dynamic Tool Updates** - `listChanged` capability exists but not used
+   - Planned for Phase 2 (extension toggle triggers notification)
 
-1. All tests pass consistently without cleanup warnings or timeouts
-2. No resource leaks in long-running tests
-3. Server can be started/stopped multiple times
-4. Configuration can be reloaded without server restart
-5. Clean shutdown in all scenarios (normal, error, signal)
+## Current Architecture
+
+```
+index.ts
+  └── AbcServer
+        ├── ConfigManager (config loading)
+        ├── makeSessionBackendFactory (MCP client connections)
+        └── makeHostsServiceFactory (tool aggregation)
+              └── HostsService (per endpoint)
+                    ├── TransportSessionManager (client sessions)
+                    └── hostSessions (per client connection)
+                          └── Backend connections (per MCP server)
+```
+
+## Success Criteria Status
+
+| Criteria | Status |
+|----------|--------|
+| Tests pass consistently | ⚠️ Chai ESM issue |
+| No resource leaks | ✅ |
+| Server start/stop multiple times | ✅ |
+| Config reload without restart | ⚠️ Not wired |
+| Clean shutdown | ✅ |
+
+## Next Steps
+
+See `docs/implementation-plan.md` for the continuation:
+- Phase 1.4: Extension Registry
+- Phase 2: Dynamic Extension State
+- Phase 3: WebSocket Communication
+- Phase 4: Client Redesign

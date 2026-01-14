@@ -1,5 +1,5 @@
-import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { setTimeout } from "timers/promises";
+import { TransportPort } from "../ports/transport.port";
 import { logger } from "../etc/logger";
 import { closeServices, Service, ServiceOptions } from "../etc/service";
 export type TransportSession = ReturnType<
@@ -33,7 +33,7 @@ export class TransportSessionManager {
     );
   }
 
-  createSession(transport: Transport, options?: ServiceOptions) {
+  createSession(transport: TransportPort, options?: ServiceOptions) {
     const { sessionId } = transport;
     if (!sessionId) {
       throw new Error("Transport session ID is required");
