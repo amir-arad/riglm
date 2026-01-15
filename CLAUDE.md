@@ -37,9 +37,15 @@ abc/
 └── schemas/         # Configuration examples
 ```
 
-## Runtime
+## Tech Stack
 
-This project uses **Bun** as the runtime, package manager, and test runner.
+- **Runtime:** Bun 1.x
+- **Language:** TypeScript 5.3 (Strict)
+- **Framework:** Express 5.1
+- **Validation:** Zod 3.22
+- **MCP SDK:** @modelcontextprotocol/sdk 1.12
+- **Testing:** Bun test runner
+- **Config:** JSON5
 
 ## Quick Start
 
@@ -158,6 +164,14 @@ LOG_LEVEL=info                         # Logging level
 ## Skills
 
 This project includes the `mcp-testing` skill in `.claude/skills/` for MCP server testing patterns.
+
+## Coding Standards
+
+- **Zod first:** All external data (config, API inputs) validated with Zod schemas in `domain/`
+- **Hexagonal discipline:** Domain/ports layers must not import from adapters
+- **No `any`:** Use `unknown` and narrow with Zod if type is uncertain
+- **No `console.log`:** Use `LoggerPort` abstraction
+- **Named exports only:** No `default export`
 
 ## Related Documentation
 
