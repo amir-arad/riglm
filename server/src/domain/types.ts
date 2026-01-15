@@ -1,52 +1,87 @@
 /**
- * Core domain types - NO EXTERNAL DEPENDENCIES
+ * Core domain types - Zod schemas with derived TypeScript types
  * This file contains all domain models used throughout the application.
  */
 
+import { z } from "zod";
+
 // ============================================================================
-// Configuration Types
+// Zod Schemas - Configuration Types
+// ============================================================================
+
+/** Identifier pattern: starts with letter/underscore, alphanumeric + underscore */
+const IdentifierSchema = z
+  .string()
+  .regex(
+    /^[a-zA-Z_][a-zA-Z0-9_]*$/,
+    "Must start with a letter or underscore and contain only letters, numbers, and underscores"
+  );
+
+/** Filter patterns for tool filtering */
+const FiltersSchema = z.array(z.string());
+
+/** Local MCP server configuration (stdio transport) */
+const LocalServerConfigSchema = z.object({
+  command: z.string().min(1),
+  args: z.array(z.string()),
+  env: z.record(z.string()).optional(),
+  description: z.string().optional(),
+  filters: FiltersSchema.optional(),
+});
+
+/** Remote MCP server configuration (SSE/HTTP transport) */
+const RemoteServerConfigSchema = z.object({
+  url: z.string().min(1),
+  headers: z.record(z.string()).optional(),
+  description: z.string().optional(),
+  filters: FiltersSchema.optional(),
+});
+
+/** Server configuration - either local or remote */
+const ServerConfigSchema = z.union([
+  LocalServerConfigSchema,
+  RemoteServerConfigSchema,
+]);
+
+/** Endpoint configuration - aggregates multiple servers */
+const EndpointConfigSchema = z.object({
+  description: z.string().optional(),
+  servers: z.array(z.string()).min(1, "Endpoint must have at least one server"),
+  filters: FiltersSchema.optional(),
+  apiKey: z.string().optional(),
+});
+
+/** Root application configuration */
+const ConfigSchema = z.object({
+  servers: z.record(ServerConfigSchema),
+  endpoints: z.record(EndpointConfigSchema),
+  filters: FiltersSchema.optional(),
+});
+
+// ============================================================================
+// Derived Types - Configuration
 // ============================================================================
 
 /** Server/endpoint identifier pattern: ^[a-zA-Z_][a-zA-Z0-9_]*$ */
-export type Identifier = string;
+export type Identifier = z.infer<typeof IdentifierSchema>;
 
 /** Filter patterns for tool filtering */
-export type Filters = string[];
+export type Filters = z.infer<typeof FiltersSchema>;
 
 /** Local MCP server configuration (stdio transport) */
-export interface LocalServerConfig {
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
-  description?: string;
-  filters?: Filters;
-}
+export type LocalServerConfig = z.infer<typeof LocalServerConfigSchema>;
 
 /** Remote MCP server configuration (SSE/HTTP transport) */
-export interface RemoteServerConfig {
-  url: string;
-  headers?: Record<string, string>;
-  description?: string;
-  filters?: Filters;
-}
+export type RemoteServerConfig = z.infer<typeof RemoteServerConfigSchema>;
 
 /** Server configuration - either local or remote */
-export type ServerConfig = LocalServerConfig | RemoteServerConfig;
+export type ServerConfig = z.infer<typeof ServerConfigSchema>;
 
 /** Endpoint configuration - aggregates multiple servers */
-export interface EndpointConfig {
-  description?: string;
-  servers: Identifier[];
-  filters?: Filters;
-  apiKey?: string;
-}
+export type EndpointConfig = z.infer<typeof EndpointConfigSchema>;
 
 /** Root application configuration */
-export interface Config {
-  servers: Record<Identifier, ServerConfig>;
-  endpoints: Record<Identifier, EndpointConfig>;
-  filters?: Filters;
-}
+export type Config = z.infer<typeof ConfigSchema>;
 
 // ============================================================================
 // Type Guards
@@ -63,7 +98,30 @@ export function isRemoteServer(server: ServerConfig): server is RemoteServerConf
 }
 
 // ============================================================================
-// MCP Tool Types
+// Validation Functions
+// ============================================================================
+
+/** Validate that a string is a valid identifier */
+export function validateIdentifier(name: string): asserts name is Identifier {
+  IdentifierSchema.parse(name);
+}
+
+// ============================================================================
+// Schema Exports
+// ============================================================================
+
+export {
+  IdentifierSchema,
+  FiltersSchema,
+  LocalServerConfigSchema,
+  RemoteServerConfigSchema,
+  ServerConfigSchema,
+  EndpointConfigSchema,
+  ConfigSchema,
+};
+
+// ============================================================================
+// MCP Tool Types (not validated at runtime - from SDK)
 // ============================================================================
 
 /** JSON Schema type for tool input definitions */
@@ -133,17 +191,4 @@ export interface SessionInfo {
   sessionId: string;
   createdAt: Date;
   lastActivity: Date;
-}
-
-// ============================================================================
-// Validation Functions
-// ============================================================================
-
-/** Validate that a string is a valid identifier */
-export function validateIdentifier(name: string): asserts name is Identifier {
-  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
-    throw new Error(
-      `Invalid server name "${name}". Must start with a letter or underscore and contain only letters, numbers, and underscores.`
-    );
-  }
 }

@@ -37,10 +37,11 @@ The server uses a **hexagonal architecture** (ports/adapters pattern) for clean 
    - `transport.port.ts` - Transport layer
 
 3. **Domain** (`src/domain/`) - Pure business logic:
-   - `types.ts` - Configuration and tool types
+   - `types.ts` - Configuration types (Zod schemas)
    - `filter-engine.ts` - Tool filtering with glob patterns
-   - `config-resolver.ts` - Config validation
+   - `config-resolver.ts` - Config validation (Zod)
    - `tool-aggregator.ts` - Tool namespacing/aggregation
+   - `extension.ts` - Extension types (Zod schemas)
 
 4. **Adapters** (`src/adapters/`) - Implementations:
    - `http/` - Express routes and error middleware
@@ -54,6 +55,10 @@ The server uses a **hexagonal architecture** (ports/adapters pattern) for clean 
 
 6. **Host Gateway** (`src/host-gateway/`) - Session management:
    - `transport-session-manager.ts` - Client session lifecycle
+
+7. **Extension Manager** (`src/extension-manager/`) - Extension registry:
+   - `extension.registry.ts` - CRUD operations for extensions
+   - File-based persistence via `ExtensionStoragePort`
 
 ### Request Flow
 
@@ -129,7 +134,7 @@ LOG_LEVEL=info                         # Winston log level (debug, info, warn, e
 
 ## Testing
 
-40 tests using Bun's built-in test runner:
+105 tests using Bun's built-in test runner:
 
 ```bash
 bun test                           # Run all tests
@@ -148,6 +153,8 @@ bun test --watch                   # Watch mode
 | `test/e2e/error-handling.test.ts` | Error and cleanup scenarios |
 | `test/e2e/stream-termination.test.ts` | SSE stream lifecycle |
 | `test/e2e/resource-deallocation.test.ts` | Memory and resource cleanup |
+| `test/extension.test.ts` | Extension domain types and Zod validation |
+| `test/extension-registry.test.ts` | ExtensionRegistry CRUD operations |
 
 ### Test Fixtures
 

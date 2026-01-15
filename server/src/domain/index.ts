@@ -13,3 +13,6 @@ export { ApiError } from "./error";
 export { FilterEngine } from "./filter-engine";
 export { ToolAggregator } from "./tool-aggregator";
 export { ConfigResolver, validateConfig } from "./config-resolver";
+
+// Extension types
+export * from "./extension";

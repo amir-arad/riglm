@@ -41,3 +41,6 @@ export type {
   ListToolsResponse,
   CallToolHandlerRequest,
 } from "./mcp-server.port";
+
+// Extension Storage
+export type { ExtensionStoragePort } from "./extension-storage.port";

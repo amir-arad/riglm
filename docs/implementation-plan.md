@@ -8,7 +8,7 @@ Transform the MCP aggregator (Ghostwheels) into a full-featured Personal AI Exte
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| 1 | Foundation & Cleanup | In Progress |
+| 1 | Foundation & Cleanup | ✅ Complete |
 | 2 | Dynamic Extension State | Planned |
 | 3 | Real-Time WebSocket | Planned |
 | 4 | Client Redesign | Planned |
@@ -33,9 +33,11 @@ Transform the MCP aggregator (Ghostwheels) into a full-featured Personal AI Exte
 - Removed `connectServerImpl()` and related code
 - Cleaned up imports
 
-### 1.4 Extension Registry (Next)
+### 1.4 Extension Registry ✅
 
-Create file-based extension CRUD operations.
+File-based extension CRUD operations with Zod validation.
+
+**Design Document**: See [extension-registry-design.md](./extension-registry-design.md) for terminology, design decisions, and rationale.
 
 **New Files:**
 ```
@@ -279,10 +281,9 @@ server/
 │   │   ├── hosts.service.ts      # Modified in Phase 2
 │   │   └── backend.service.ts
 │   │
-│   ├── extension-manager/        # Phase 1.4 (planned)
-│   │   ├── extension.types.ts
-│   │   ├── extension.registry.ts
-│   │   └── extension.store.ts
+│   ├── extension-manager/        # Phase 1.4 ✅
+│   │   ├── index.ts
+│   │   └── extension.registry.ts
 │   │
 │   ├── api/                      # Phase 2 & 3 (planned)
 │   │   ├── management.controller.ts
@@ -297,7 +298,7 @@ server/
 │       └── service.ts
 │
 ├── data/
-│   └── extensions.json           # Phase 1.4 (planned)
+│   └── extensions.json           # Phase 1.4 ✅
 │
 └── test/
     ├── filter.test.ts
@@ -335,9 +336,10 @@ client/
 ## Verification Checklist
 
 ### After Phase 1
-- [ ] `bun run typecheck` passes
-- [ ] Server starts with `bun run dev`
-- [ ] Can connect MCP client to endpoint
+- [x] `bun run typecheck` passes
+- [x] Server starts with `bun run dev`
+- [x] Can connect MCP client to endpoint
+- [x] 105 tests passing
 
 ### After Phase 2
 - [ ] REST API returns extension list

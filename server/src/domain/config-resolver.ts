@@ -1,16 +1,16 @@
 /**
  * Config Resolver - Pure domain logic for configuration validation and resolution
- * NO EXTERNAL DEPENDENCIES
  */
 
+import { z } from "zod";
 import {
   Config,
   Filters,
   Identifier,
   ServerConfig,
   EndpointConfig,
-  isLocalServer,
-  isRemoteServer,
+  ConfigSchema,
+  IdentifierSchema,
 } from "./types";
 
 /**
@@ -102,98 +102,67 @@ export class ConfigResolver {
 }
 
 // ============================================================================
+// Validation Schema with Cross-References
+// ============================================================================
+
+/**
+ * Extended config schema with cross-reference validation.
+ * Validates that:
+ * 1. All server/endpoint keys are valid identifiers
+ * 2. All endpoint server references point to existing servers
+ */
+const ValidatedConfigSchema = ConfigSchema.superRefine((config, ctx) => {
+  // Validate server identifiers
+  for (const serverName of Object.keys(config.servers)) {
+    const result = IdentifierSchema.safeParse(serverName);
+    if (!result.success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid server name "${serverName}": ${result.error.issues[0].message}`,
+        path: ["servers", serverName],
+      });
+    }
+  }
+
+  // Validate endpoint identifiers and server references
+  for (const [endpointName, endpoint] of Object.entries(config.endpoints)) {
+    const identResult = IdentifierSchema.safeParse(endpointName);
+    if (!identResult.success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid endpoint name "${endpointName}": ${identResult.error.issues[0].message}`,
+        path: ["endpoints", endpointName],
+      });
+    }
+
+    // Validate server references
+    for (const serverName of endpoint.servers) {
+      if (!config.servers[serverName]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Endpoint "${endpointName}" references non-existent server "${serverName}"`,
+          path: ["endpoints", endpointName, "servers"],
+        });
+      }
+    }
+  }
+});
+
+// ============================================================================
 // Validation Functions
 // ============================================================================
 
 /**
- * Validate an identifier matches the required pattern
- * @param name The identifier to validate
- * @throws Error if identifier is invalid
- */
-export function validateIdentifier(name: string): asserts name is Identifier {
-  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
-    throw new Error(
-      `Invalid identifier "${name}". Must start with a letter or underscore and contain only letters, numbers, and underscores.`
-    );
-  }
-}
-
-/**
- * Validate that filters is an array of strings
- * @param filters The filters value to validate
- * @param context Description of where the filters are defined (for error messages)
- * @throws Error if filters are invalid
- */
-function validateFilters(filters: unknown, context: string): void {
-  if (
-    !Array.isArray(filters) ||
-    !filters.every((p) => typeof p === "string")
-  ) {
-    throw new Error(`The filters in ${context} must be an array of strings`);
-  }
-}
-
-/**
  * Validate a complete configuration object
  * @param config Unknown configuration object to validate
- * @throws Error if configuration is invalid
+ * @throws ZodError if configuration is invalid
  */
 export function validateConfig(config: unknown): asserts config is Config {
-  if (typeof config !== "object" || config === null || Array.isArray(config)) {
-    throw new Error("Configuration must be a non-null object");
-  }
-
-  const cfg = config as Config;
-
-  // Validate required sections exist
-  if (!cfg.servers || typeof cfg.servers !== "object") {
-    throw new Error('Configuration must contain a "servers" object');
-  }
-  if (!cfg.endpoints || typeof cfg.endpoints !== "object") {
-    throw new Error('Configuration must contain an "endpoints" object');
-  }
-
-  // Validate global filters if present
-  if (cfg.filters) {
-    validateFilters(cfg.filters, "global configuration");
-  }
-
-  // Validate servers
-  for (const [serverName, server] of Object.entries(cfg.servers)) {
-    validateIdentifier(serverName);
-
-    if (!isLocalServer(server) && !isRemoteServer(server)) {
-      throw new Error(
-        `Server "${serverName}" must be either a local or remote server configuration`
-      );
-    }
-
-    if (server.filters) {
-      validateFilters(server.filters, `server "${serverName}"`);
-    }
-  }
-
-  // Validate endpoints
-  for (const [endpointName, endpoint] of Object.entries(cfg.endpoints)) {
-    validateIdentifier(endpointName);
-
-    if (!Array.isArray(endpoint.servers) || endpoint.servers.length === 0) {
-      throw new Error(
-        `Endpoint "${endpointName}" must contain a non-empty "servers" array`
-      );
-    }
-
-    // Validate all referenced servers exist
-    for (const serverName of endpoint.servers) {
-      if (!cfg.servers[serverName]) {
-        throw new Error(
-          `Endpoint "${endpointName}" references non-existent server "${serverName}"`
-        );
-      }
-    }
-
-    if (endpoint.filters) {
-      validateFilters(endpoint.filters, `endpoint "${endpointName}"`);
-    }
-  }
+  ValidatedConfigSchema.parse(config);
 }
+
+// Re-export validateIdentifier from types for backward compatibility
+export { validateIdentifier } from "./types";
+
+// Export the schema for external use
+export { ValidatedConfigSchema };
