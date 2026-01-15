@@ -1,10 +1,10 @@
-import { logger } from "./logger";
+import type { LoggerPort } from "../ports/logger.port";
 
 /**
  * Options for service creation and management
  */
 export interface ServiceOptions {
-  logger?: typeof logger;
+  logger?: LoggerPort;
   /**
    * Optional AbortSignal for controlling service lifecycle
    */
@@ -24,13 +24,14 @@ export type Service = {
 };
 
 export function closeServices(
-  services: Iterable<[string, Promise<Service> | Service]>
+  services: Iterable<[string, Promise<Service> | Service]>,
+  logger?: LoggerPort
 ) {
   return Promise.all(
     [...services].map(([name, ep]) =>
       Promise.resolve(ep).then((e) =>
         e.close().catch((error) => {
-          logger.error("Error closing service: " + name, error);
+          logger?.error("Error closing service: " + name, error);
         })
       )
     )
@@ -39,7 +40,8 @@ export function closeServices(
 
 export function makeServicesContainer<T extends Service>(
   factory: (id: string, options?: ServiceOptions) => Promise<T>,
-  serviceName: string
+  serviceName: string,
+  logger?: LoggerPort
 ) {
   const services = new Map<string, Promise<T>>();
   return {
@@ -64,9 +66,9 @@ export function makeServicesContainer<T extends Service>(
             options.signal.addEventListener(
               "abort",
               () => {
-                logger.info(`${serviceName} service aborted: ${id}`);
+                logger?.info(`${serviceName} service aborted: ${id}`);
                 s.close().catch((error) => {
-                  logger.error(
+                  logger?.error(
                     `Error closing aborted service ${serviceName}: ${id}`,
                     error
                   );
@@ -76,19 +78,19 @@ export function makeServicesContainer<T extends Service>(
             );
           }
 
-          logger.info(`${serviceName} service created: ${id}`);
+          logger?.info(`${serviceName} service created: ${id}`);
           return s;
         });
 
         services.set(id, sp);
         sp.catch((error) => {
-          logger.error(`Error creating ${serviceName} service: ${id}`, error);
+          logger?.error(`Error creating ${serviceName} service: ${id}`, error);
           services.delete(id);
         });
       }
       return services.get(id)!;
     },
-    close: () => closeServices(services.entries()),
+    close: () => closeServices(services.entries(), logger),
   };
 }
 

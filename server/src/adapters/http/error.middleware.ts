@@ -3,7 +3,7 @@
  */
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../../domain/error";
-import { logger } from "../../etc/logger";
+import type { LoggerPort } from "../../ports/logger.port";
 
 export function notFoundHandler(
   _req: Request,
@@ -14,7 +14,7 @@ export function notFoundHandler(
 }
 
 export const errorHandler =
-  (isProduction: boolean) =>
+  (isProduction: boolean, logger: LoggerPort) =>
   (err: Error | ApiError, req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
       logger.error("Attempted to send error response after headers were sent", {

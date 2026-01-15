@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { AddressInfo } from "net";
 import { TransportSessionManager } from "../../src/host-gateway/transport-session-manager";
 import { setTimeout } from "node:timers/promises";
+import { createSilentLogger } from "../mocks/mock-logger";
 
 function fakeTransport(sessionId: string = "test") {
   return {
@@ -20,7 +21,7 @@ describe("Stream Termination Tests", () => {
     await new Promise<void>((resolve) => httpServer.listen(0, () => resolve()));
     void (httpServer.address() as AddressInfo).port;
 
-    sessionManager = new TransportSessionManager();
+    sessionManager = new TransportSessionManager(createSilentLogger());
   });
 
   afterEach(async () => {

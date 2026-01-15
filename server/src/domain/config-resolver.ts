@@ -161,8 +161,5 @@ export function validateConfig(config: unknown): asserts config is Config {
   ValidatedConfigSchema.parse(config);
 }
 
-// Re-export validateIdentifier from types for backward compatibility
-export { validateIdentifier } from "./types";
-
 // Export the schema for external use
 export { ValidatedConfigSchema };

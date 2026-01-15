@@ -98,15 +98,6 @@ export function isRemoteServer(server: ServerConfig): server is RemoteServerConf
 }
 
 // ============================================================================
-// Validation Functions
-// ============================================================================
-
-/** Validate that a string is a valid identifier */
-export function validateIdentifier(name: string): asserts name is Identifier {
-  IdentifierSchema.parse(name);
-}
-
-// ============================================================================
 // Schema Exports
 // ============================================================================
 

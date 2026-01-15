@@ -3,7 +3,7 @@
  */
 
 // Logging
-export { WinstonLoggerAdapter, createWinstonLoggerAdapter, createSilentLogger } from "./logging/winston.adapter";
+export { WinstonLoggerAdapter, createWinstonLoggerAdapter } from "./logging/winston.adapter";
 export type { LoggerEnvConfig } from "./logging/winston.adapter";
 
 // Storage
@@ -22,6 +22,4 @@ export {
   SseClientTransportAdapter,
   HttpClientTransportAdapter,
   SseServerTransportAdapter,
-  isSseAuthError,
-  createMcpError,
 } from "./mcp";

@@ -3,7 +3,6 @@
  */
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SseError } from "@modelcontextprotocol/sdk/client/sse.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
   McpClientPort,
@@ -83,11 +82,4 @@ export class McpClientFactoryAdapter implements McpClientFactory {
   create(name: string, version: string): McpClientPort {
     return new McpClientAdapter(name, version);
   }
-}
-
-/**
- * Check if an error is an SSE authentication error
- */
-export function isSseAuthError(error: unknown): boolean {
-  return error instanceof SseError && error.code === 401;
 }

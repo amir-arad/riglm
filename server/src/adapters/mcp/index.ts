@@ -3,10 +3,10 @@
  */
 
 // Client adapter
-export { McpClientAdapter, McpClientFactoryAdapter, isSseAuthError } from "./mcp-client.adapter";
+export { McpClientAdapter, McpClientFactoryAdapter } from "./mcp-client.adapter";
 
 // Server adapter
-export { McpServerAdapter, McpServerFactoryAdapter, createMcpError } from "./mcp-server.adapter";
+export { McpServerAdapter, McpServerFactoryAdapter } from "./mcp-server.adapter";
 
 // Transport adapters
 export {

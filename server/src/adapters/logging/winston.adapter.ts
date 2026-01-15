@@ -167,11 +167,3 @@ export function createWinstonLoggerAdapter(env: LoggerEnvConfig): LoggerPort {
   const winstonLogger = createWinstonLogger(env);
   return new WinstonLoggerAdapter(winstonLogger);
 }
-
-/**
- * Create a silent logger (for testing)
- */
-export function createSilentLogger(): LoggerPort {
-  const silent = winston.createLogger({ silent: true });
-  return new WinstonLoggerAdapter(silent);
-}

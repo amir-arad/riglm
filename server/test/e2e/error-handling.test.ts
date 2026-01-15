@@ -2,6 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { setTimeout } from "timers/promises";
 import { TransportSessionManager } from "../../src/host-gateway/transport-session-manager";
 import { TransportPort } from "../../src/ports/transport.port";
+import { createSilentLogger } from "../mocks/mock-logger";
 
 function fakeTransport(sessionId: string = "test"): TransportPort {
   let _onerror: ((error: Error) => void) | undefined;
@@ -22,7 +23,7 @@ describe("TransportSessionManager Error Handling Tests", () => {
   let sessionManager: TransportSessionManager;
 
   beforeEach(async () => {
-    sessionManager = new TransportSessionManager();
+    sessionManager = new TransportSessionManager(createSilentLogger());
   });
 
   afterEach(async () => {

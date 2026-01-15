@@ -128,15 +128,3 @@ export class McpServerFactoryAdapter implements McpServerFactory {
     return new McpServerAdapter(config);
   }
 }
-
-/**
- * Create an MCP error for use in handlers
- */
-export function createMcpError(code: "InvalidRequest" | "MethodNotFound" | "ConnectionClosed", message: string): Error {
-  const errorCodes = {
-    InvalidRequest: ErrorCode.InvalidRequest,
-    MethodNotFound: ErrorCode.MethodNotFound,
-    ConnectionClosed: ErrorCode.ConnectionClosed,
-  };
-  return new McpError(errorCodes[code], message);
-}

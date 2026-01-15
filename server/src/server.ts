@@ -106,9 +106,9 @@ export class AbcServer {
         },
       })
     );
-    app.use(makeHostsRoutes(this.hostsServices));
+    app.use(makeHostsRoutes(this.hostsServices, logger));
     app.use(notFoundHandler);
-    app.use(errorHandler(env.isProduction));
+    app.use(errorHandler(env.isProduction, logger));
 
     // Start HTTP server
     this.port = await new Promise<number>((resolve, reject) => {

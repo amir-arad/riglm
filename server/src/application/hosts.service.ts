@@ -61,7 +61,8 @@ export interface HostsService {
 export function createHostsServiceFactory(deps: HostsServiceDeps) {
   return makeServicesContainer(
     (endpointId, options) => createHostsService(endpointId, deps, options),
-    `HostsService`
+    `HostsService`,
+    deps.logger
   );
 }
 
@@ -89,7 +90,7 @@ async function createHostsService(
   });
 
   // Transport session manager
-  const tsm = new TransportSessionManager();
+  const tsm = new TransportSessionManager(logger);
 
   // Filter engine cache
   const filterEngineCache = new Map<string, FilterEngine>();
@@ -180,7 +181,7 @@ async function createHostsService(
   }
 
   // Host sessions container
-  const hostSessions = makeServicesContainer(createHostSession, `HostSession`);
+  const hostSessions = makeServicesContainer(createHostSession, `HostSession`, logger);
 
   /**
    * Create a new session for a transport

@@ -3,12 +3,12 @@
  */
 import { Request, Response, Router } from "express";
 import { ApiError } from "../../domain/error";
-import { logger } from "../../etc/logger";
+import type { LoggerPort } from "../../ports/logger.port";
 import { Services } from "../../etc/service";
 import { SseServerTransportAdapter } from "../mcp/transports/sse-server.adapter";
 import { HostsService } from "../../application/hosts.service";
 
-export function makeHostsRoutes(hostsServices: Services<HostsService>) {
+export function makeHostsRoutes(hostsServices: Services<HostsService>, logger: LoggerPort) {
   const hostsRoutes = Router();
 
   hostsRoutes.param("endpointId", async (req, res, next, endpointId) => {
@@ -75,11 +75,11 @@ export function makeHostsRoutes(hostsServices: Services<HostsService>) {
 
   hostsRoutes.post("/:endpointId/messages", async (req, res) => {
     const sessionId = req.headers["x-session-id"] || req.query.sessionId;
-    await handleMessage(sessionId, req, res);
+    await handleMessage(sessionId, req, res, logger);
   });
   hostsRoutes.post("/:endpointId/messages/:sessionId", async (req, res) => {
     const sessionId = req.params.sessionId;
-    await handleMessage(sessionId, req, res);
+    await handleMessage(sessionId, req, res, logger);
   });
 
   hostsRoutes.get("/:endpointId/status", (req, res) => {
@@ -100,7 +100,7 @@ type EndpointRequest = Request<{
   hostsService: HostsService;
 };
 
-async function handleMessage(sessionId: unknown, req: Request, res: Response) {
+async function handleMessage(sessionId: unknown, req: Request, res: Response, logger: LoggerPort) {
   const { hostsService } = req as EndpointRequest;
   if (!sessionId || typeof sessionId !== "string") {
     return res.status(400).json({ error: "Session ID is required" }), void 0;
