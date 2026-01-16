@@ -39,14 +39,15 @@ File-based extension CRUD operations with Zod validation.
 
 **Design Document**: See [extension-registry-design.md](./extension-registry-design.md) for terminology, design decisions, and rationale.
 
-**New Files:**
+**Files:**
 ```
 server/src/extension-manager/
 ├── index.ts                 # Public exports
-├── extension.types.ts       # TypeScript interfaces
-├── extension.registry.ts    # CRUD operations
-└── extension.store.ts       # File-based persistence
+└── extension.registry.ts    # CRUD operations
 ```
+
+**Domain types:** `server/src/domain/extension.ts` (Zod schemas)
+**Storage adapter:** `server/src/adapters/storage/file-extension.adapter.ts`
 
 **Data Model:**
 ```typescript
@@ -285,8 +286,10 @@ server/
 │   │   ├── index.ts
 │   │   └── extension.registry.ts
 │   │
-│   ├── api/                      # Phase 2 & 3 (planned)
-│   │   ├── management.controller.ts
+│   ├── adapters/http/            # Phase 2 (existing, extend for management)
+│   │   └── management.routes.ts  # Management REST API (Phase 2)
+│   │
+│   ├── api/                      # Phase 3 (planned)
 │   │   └── websocket.controller.ts
 │   │
 │   ├── host-gateway/             # Session management ✅
@@ -339,7 +342,7 @@ client/
 - [x] `bun run typecheck` passes
 - [x] Server starts with `bun run dev`
 - [x] Can connect MCP client to endpoint
-- [x] 105 tests passing
+- [x] 173 tests passing
 
 ### After Phase 2
 - [ ] REST API returns extension list

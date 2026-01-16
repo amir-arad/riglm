@@ -17,7 +17,6 @@ export {
   McpServerAdapter,
   McpServerFactoryAdapter,
   ClientTransportFactoryAdapter,
-  ServerTransportFactoryAdapter,
   StdioClientTransportAdapter,
   SseClientTransportAdapter,
   HttpClientTransportAdapter,

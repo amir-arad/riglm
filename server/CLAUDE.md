@@ -128,13 +128,14 @@ LOG_LEVEL=info                         # Winston log level (debug, info, warn, e
 - `src/domain/filter-engine.ts` - Tool filtering engine
 - `src/application/hosts.service.ts` - Tool aggregation per endpoint
 - `src/application/backend.service.ts` - MCP client connections
+- `src/application/config.service.ts` - Configuration loading and validation
 - `src/adapters/http/routes.ts` - HTTP routes
 - `src/host-gateway/transport-session-manager.ts` - Session lifecycle
 - `src/etc/service.ts` - Service container with cleanup
 
 ## Testing
 
-105 tests using Bun's built-in test runner:
+173 tests using Bun's built-in test runner:
 
 ```bash
 bun test                           # Run all tests

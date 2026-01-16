@@ -32,9 +32,10 @@ abc/
 │       ├── domain/      # Business logic
 │       ├── adapters/    # Implementations
 │       └── application/ # Services
-├── client/          # React frontend - Web UI (placeholder, Phase 4)
+├── client/          # Static Web UI
+│   └── public/      # Vanilla HTML/CSS/JS (single-page)
 ├── docs/            # Documentation and plans
-└── schemas/         # Configuration examples
+└── schemas/         # Configuration schema
 ```
 
 ## Tech Stack
@@ -55,10 +56,9 @@ cd server
 bun install
 bun run dev          # Development (port 3000)
 
-# Client (separate terminal)
-cd client
-bun install
-bun run dev          # Vite dev server (port 8080)
+# Client (served by Express)
+# Static files in client/public/ are served at /ui
+# Access at http://localhost:3000/ui
 ```
 
 ## Server Commands
@@ -73,18 +73,13 @@ bun run lint         # ESLint
 bun run typecheck    # Type check
 ```
 
-## Client Commands
+## Client
 
-```bash
-bun install          # Install dependencies
-bun run dev          # Vite dev server (port 8080)
-bun run build        # Production build
-bun run preview      # Preview production build
-```
+The web UI is a vanilla HTML/CSS/JS single-page application in `client/public/`. It is served by the Express server at `/ui` - no separate build step required.
 
 ## Testing
 
-The server has 105 tests using Bun's built-in test runner:
+The server has 173 tests using Bun's built-in test runner:
 
 ```bash
 cd server
