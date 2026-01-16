@@ -17,6 +17,9 @@ export function createMockConfigStorage(
     load: () => config,
     get: () => config,
     reload: () => true,
+    save: (newConfig: Config) => {
+      config = newConfig;
+    },
     getFilters: (serverName: string, _endpointId?: string) => {
       const serverConfig = config.servers[serverName];
       const serverFilters = serverConfig?.filters || [];

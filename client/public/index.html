@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>ABC Extension Manager</title>
+  <style>
+    :root {
+      --color-primary: #4F46E5;
+      --color-primary-hover: #4338CA;
+      --color-success: #10B981;
+      --color-danger: #EF4444;
+      --color-warning: #F59E0B;
+      --color-bg: #F9FAFB;
+      --color-card: #FFFFFF;
+      --color-text: #111827;
+      --color-muted: #6B7280;
+      --color-border: #E5E7EB;
+      --radius: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: var(--color-card);
+      border-bottom: 1px solid var(--color-border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-muted);
+    }
+
+    .status-dot.online {
+      background: var(--color-success);
+    }
+
+    .status-dot.offline {
+      background: var(--color-danger);
+    }
+
+    /* Navigation */
+    nav {
+      background: var(--color-card);
+      border-bottom: 1px solid var(--color-border);
+      padding: 0 2rem;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 0;
+    }
+
+    nav a {
+      display: block;
+      padding: 1rem 1.5rem;
+      color: var(--color-muted);
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--color-text);
+    }
+
+    nav a.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+
+    /* Main Content */
+    main {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--color-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--color-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: var(--color-muted);
+      margin-top: 0.25rem;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--color-muted);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    tr:hover {
+      background: var(--color-bg);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--color-primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--color-bg);
+      color: var(--color-text);
+      border: 1px solid var(--color-border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-border);
+    }
+
+    .btn-danger {
+      background: var(--color-danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #DC2626;
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 0.625rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--color-muted);
+      margin-top: 0.25rem;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    /* Radio buttons */
+    .radio-group {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .radio-option input {
+      width: auto;
+    }
+
+    /* Checkboxes */
+    .checkbox-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .checkbox-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .checkbox-option input {
+      width: auto;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 1rem;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+    }
+
+    .alert-success {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+
+    .alert-error {
+      background: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .alert-warning {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: var(--color-card);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .modal-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1.5rem;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--color-muted);
+    }
+
+    /* Connection URLs */
+    .url-list {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .url-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      font-size: 0.875rem;
+    }
+
+    .url-item code {
+      background: var(--color-bg);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: monospace;
+      flex: 1;
+    }
+
+    /* Type badge */
+    .badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      font-size: 0.75rem;
+      border-radius: 9999px;
+      font-weight: 500;
+    }
+
+    .badge-local {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+
+    .badge-remote {
+      background: #E0E7FF;
+      color: #4338CA;
+    }
+
+    /* Info section */
+    .info-section {
+      font-size: 0.875rem;
+      color: var(--color-muted);
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* Hidden */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo">ABC Extension Manager</div>
+    <div class="status-indicator">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Checking...</span>
+    </div>
+  </header>
+
+  <!-- Navigation -->
+  <nav>
+    <ul>
+      <li><a href="#/dashboard" data-route="dashboard">Dashboard</a></li>
+      <li><a href="#/servers" data-route="servers">Servers</a></li>
+      <li><a href="#/endpoints" data-route="endpoints">Endpoints</a></li>
+      <li><a href="#/settings" data-route="settings">Settings</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Content -->
+  <main id="content"></main>
+
+  <!-- Modal Container -->
+  <div id="modal-container"></div>
+
+  <script>
+    // =========================================================================
+    // API Client
+    // =========================================================================
+    const API = {
+      async get(path) {
+        const res = await fetch(`/api${path}`);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Request failed');
+        }
+        return res.json();
+      },
+
+      async post(path, data) {
+        const res = await fetch(`/api${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Request failed');
+        }
+        return res.json();
+      },
+
+      async put(path, data) {
+        const res = await fetch(`/api${path}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Request failed');
+        }
+        return res.json();
+      },
+
+      async delete(path) {
+        const res = await fetch(`/api${path}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message || 'Request failed');
+        }
+        return res.json();
+      }
+    };
+
+    // =========================================================================
+    // State
+    // =========================================================================
+    const State = {
+      servers: [],
+      endpoints: [],
+      settings: { filters: [] },
+      status: null,
+      message: null
+    };
+
+    // =========================================================================
+    // Router
+    // =========================================================================
+    const Router = {
+      routes: {},
+
+      register(path, handler) {
+        this.routes[path] = handler;
+      },
+
+      navigate(path) {
+        window.location.hash = path;
+      },
+
+      init() {
+        window.addEventListener('hashchange', () => this.handle());
+        this.handle();
+      },
+
+      handle() {
+        const hash = window.location.hash.slice(1) || '/dashboard';
+        const [path, ...params] = hash.split('/').filter(Boolean);
+        const route = '/' + path;
+
+        // Update active nav
+        document.querySelectorAll('nav a').forEach(a => {
+          a.classList.toggle('active', a.getAttribute('data-route') === path);
+        });
+
+        if (this.routes[route]) {
+          this.routes[route](params);
+        } else {
+          this.routes['/dashboard']();
+        }
+      }
+    };
+
+    // =========================================================================
+    // Views
+    // =========================================================================
+
+    // Dashboard View
+    async function renderDashboard() {
+      const content = document.getElementById('content');
+
+      try {
+        const [status, { servers }, { endpoints }] = await Promise.all([
+          API.get('/status'),
+          API.get('/servers'),
+          API.get('/endpoints')
+        ]);
+
+        State.status = status;
+        State.servers = servers;
+        State.endpoints = endpoints;
+
+        const totalSessions = Object.values(status.endpoints).reduce(
+          (sum, e) => sum + e.activeSessions, 0
+        );
+
+        content.innerHTML = `
+          ${renderMessage()}
+          <h2 style="margin-bottom: 1.5rem;">Dashboard</h2>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value">${servers.length}</div>
+              <div class="stat-label">Servers</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${endpoints.length}</div>
+              <div class="stat-label">Endpoints</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${totalSessions}</div>
+              <div class="stat-label">Sessions</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Endpoints Status</span>
+            </div>
+            ${endpoints.length === 0 ? `
+              <div class="empty-state">No endpoints configured</div>
+            ` : `
+              <table>
+                <thead>
+                  <tr>
+                    <th>Endpoint</th>
+                    <th>Status</th>
+                    <th>Sessions</th>
+                    <th>Servers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${endpoints.map(ep => `
+                    <tr>
+                      <td><strong>${ep.id}</strong></td>
+                      <td><span class="status-dot online" style="display:inline-block;"></span> Online</td>
+                      <td>${status.endpoints[ep.id]?.activeSessions ?? 0}</td>
+                      <td>${ep.servers.join(', ')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `}
+          </div>
+
+          <div class="info-section">
+            <strong>Uptime:</strong> ${formatUptime(status.uptime)} &nbsp;&nbsp;
+            <strong>Memory:</strong> ${(status.memory.rss / 1024 / 1024).toFixed(1)} MB
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      }
+    }
+
+    // Servers List View
+    async function renderServers(params) {
+      const content = document.getElementById('content');
+
+      if (params[0] === 'new') {
+        return renderServerForm();
+      }
+      if (params[0] === 'edit' && params[1]) {
+        return renderServerForm(params[1]);
+      }
+
+      try {
+        const { servers } = await API.get('/servers');
+        State.servers = servers;
+
+        content.innerHTML = `
+          ${renderMessage()}
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Servers</span>
+              <button class="btn btn-primary" onclick="Router.navigate('/servers/new')">+ Add Server</button>
+            </div>
+            ${servers.length === 0 ? `
+              <div class="empty-state">No servers configured</div>
+            ` : `
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${servers.map(s => `
+                    <tr>
+                      <td><strong>${s.id}</strong></td>
+                      <td><span class="badge badge-${s.type}">${s.type}</span></td>
+                      <td>${s.description || '-'}</td>
+                      <td>
+                        <button class="btn btn-secondary btn-sm" onclick="Router.navigate('/servers/edit/${s.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="confirmDeleteServer('${s.id}')">Delete</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `}
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      }
+    }
+
+    // Server Form View
+    async function renderServerForm(serverId) {
+      const content = document.getElementById('content');
+      let server = null;
+
+      if (serverId) {
+        try {
+          server = await API.get(`/servers/${serverId}`);
+        } catch (err) {
+          content.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+          return;
+        }
+      }
+
+      const isEdit = !!server;
+      const isLocal = server?.type === 'local' || !server;
+
+      content.innerHTML = `
+        ${renderMessage()}
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">${isEdit ? 'Edit Server' : 'Add Server'}</span>
+            <button class="btn btn-secondary" onclick="Router.navigate('/servers')">Cancel</button>
+          </div>
+
+          <form id="server-form" onsubmit="saveServer(event, ${isEdit ? `'${serverId}'` : 'null'})">
+            <div class="form-group">
+              <label for="id">ID</label>
+              <input type="text" id="id" name="id" value="${server?.id || ''}" ${isEdit ? 'readonly' : 'required'} pattern="^[a-zA-Z_][a-zA-Z0-9_]*$">
+              <div class="form-hint">Letters, numbers, and underscores. Must start with a letter or underscore.</div>
+            </div>
+
+            <div class="form-group ${isEdit ? 'hidden' : ''}">
+              <label>Type</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input type="radio" name="type" value="local" ${isLocal ? 'checked' : ''} onchange="toggleServerType()">
+                  Local
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="type" value="remote" ${!isLocal ? 'checked' : ''} onchange="toggleServerType()">
+                  Remote
+                </label>
+              </div>
+            </div>
+
+            <div id="local-fields" class="${!isLocal ? 'hidden' : ''}">
+              <div class="form-group">
+                <label for="command">Command</label>
+                <input type="text" id="command" name="command" value="${server?.command || ''}" placeholder="bunx">
+              </div>
+
+              <div class="form-group">
+                <label for="args">Arguments</label>
+                <input type="text" id="args" name="args" value="${server?.args?.join(', ') || ''}" placeholder="@example/mcp-server, --option">
+                <div class="form-hint">Comma-separated</div>
+              </div>
+
+              <div class="form-group">
+                <label for="env">Environment Variables</label>
+                <textarea id="env" name="env" placeholder="KEY=value&#10;ANOTHER_KEY=value">${server?.env ? Object.entries(server.env).map(([k,v]) => `${k}=${v}`).join('\n') : ''}</textarea>
+                <div class="form-hint">One per line: KEY=value</div>
+              </div>
+            </div>
+
+            <div id="remote-fields" class="${isLocal ? 'hidden' : ''}">
+              <div class="form-group">
+                <label for="url">URL</label>
+                <input type="text" id="url" name="url" value="${server?.url || ''}" placeholder="http://example.com/sse">
+              </div>
+
+              <div class="form-group">
+                <label for="headers">Headers</label>
+                <textarea id="headers" name="headers" placeholder="Authorization: Bearer token&#10;X-Custom: value">${server?.headers ? Object.entries(server.headers).map(([k,v]) => `${k}: ${v}`).join('\n') : ''}</textarea>
+                <div class="form-hint">One per line: Header: value</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description</label>
+              <input type="text" id="description" name="description" value="${server?.description || ''}" placeholder="Optional description">
+            </div>
+
+            <div class="form-group">
+              <label for="filters">Filters</label>
+              <input type="text" id="filters" name="filters" value="${server?.filters?.join(', ') || ''}" placeholder="*_dangerous, *_internal">
+              <div class="form-hint">Comma-separated glob patterns for tools to filter out</div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Save Server</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    function toggleServerType() {
+      const isLocal = document.querySelector('input[name="type"]:checked').value === 'local';
+      document.getElementById('local-fields').classList.toggle('hidden', !isLocal);
+      document.getElementById('remote-fields').classList.toggle('hidden', isLocal);
+    }
+
+    async function saveServer(event, serverId) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+
+      const type = formData.get('type');
+      const data = {
+        id: formData.get('id'),
+        type: type,
+        description: formData.get('description') || undefined,
+        filters: formData.get('filters') ? formData.get('filters').split(',').map(s => s.trim()).filter(Boolean) : undefined
+      };
+
+      if (type === 'local') {
+        data.command = formData.get('command');
+        data.args = formData.get('args') ? formData.get('args').split(',').map(s => s.trim()) : [];
+        const envText = formData.get('env');
+        if (envText) {
+          data.env = {};
+          envText.split('\n').forEach(line => {
+            const [key, ...rest] = line.split('=');
+            if (key && rest.length) data.env[key.trim()] = rest.join('=').trim();
+          });
+        }
+      } else {
+        data.url = formData.get('url');
+        const headersText = formData.get('headers');
+        if (headersText) {
+          data.headers = {};
+          headersText.split('\n').forEach(line => {
+            const [key, ...rest] = line.split(':');
+            if (key && rest.length) data.headers[key.trim()] = rest.join(':').trim();
+          });
+        }
+      }
+
+      try {
+        if (serverId) {
+          // Update - remove id and type for update
+          const { id, type, ...updateData } = data;
+          await API.put(`/servers/${serverId}`, updateData);
+          State.message = { type: 'success', text: 'Server updated successfully' };
+        } else {
+          await API.post('/servers', data);
+          State.message = { type: 'success', text: 'Server created successfully' };
+        }
+        Router.navigate('/servers');
+      } catch (err) {
+        State.message = { type: 'error', text: err.message };
+        Router.navigate('/servers');
+      }
+    }
+
+    function confirmDeleteServer(id) {
+      showModal(`
+        <div class="modal-title">Delete Server</div>
+        <p>Are you sure you want to delete server "${id}"?</p>
+        <p style="margin-top: 0.5rem; color: var(--color-warning);">If this server is used by endpoints, it will be removed from them.</p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+          <button class="btn btn-danger" onclick="deleteServer('${id}')">Delete</button>
+        </div>
+      `);
+    }
+
+    async function deleteServer(id) {
+      hideModal();
+      try {
+        const result = await API.delete(`/servers/${id}`);
+        if (result.warning) {
+          State.message = { type: 'warning', text: result.warning };
+        } else {
+          State.message = { type: 'success', text: 'Server deleted successfully' };
+        }
+      } catch (err) {
+        State.message = { type: 'error', text: err.message };
+      }
+      // Use handle() to re-render when already on /servers
+      Router.handle();
+    }
+
+    // Endpoints List View
+    async function renderEndpoints(params) {
+      const content = document.getElementById('content');
+
+      if (params[0] === 'new') {
+        return renderEndpointForm();
+      }
+      if (params[0] === 'edit' && params[1]) {
+        return renderEndpointForm(params[1]);
+      }
+
+      try {
+        const [{ endpoints }, { servers }, status] = await Promise.all([
+          API.get('/endpoints'),
+          API.get('/servers'),
+          API.get('/status')
+        ]);
+        State.endpoints = endpoints;
+        State.servers = servers;
+        State.status = status;
+
+        const baseUrl = window.location.origin;
+
+        content.innerHTML = `
+          ${renderMessage()}
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Endpoints</span>
+              <button class="btn btn-primary" onclick="Router.navigate('/endpoints/new')">+ Add Endpoint</button>
+            </div>
+            ${endpoints.length === 0 ? `
+              <div class="empty-state">No endpoints configured</div>
+            ` : `
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Servers</th>
+                    <th>Sessions</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${endpoints.map(ep => `
+                    <tr>
+                      <td><strong>${ep.id}</strong></td>
+                      <td>${ep.servers.join(', ')}</td>
+                      <td>${status.endpoints[ep.id]?.activeSessions ?? 0}</td>
+                      <td>
+                        <button class="btn btn-secondary btn-sm" onclick="Router.navigate('/endpoints/edit/${ep.id}')">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="confirmDeleteEndpoint('${ep.id}')">Delete</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+
+              <div class="url-list">
+                <strong>Connection URLs:</strong>
+                ${endpoints.map(ep => `
+                  <div class="url-item">
+                    <span>${ep.id}:</span>
+                    <code>${baseUrl}/${ep.id}/sse</code>
+                    <button class="btn btn-secondary btn-sm" onclick="copyUrl('${baseUrl}/${ep.id}/sse')">Copy</button>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      }
+    }
+
+    // Endpoint Form View
+    async function renderEndpointForm(endpointId) {
+      const content = document.getElementById('content');
+      let endpoint = null;
+      let servers = [];
+
+      try {
+        const serverRes = await API.get('/servers');
+        servers = serverRes.servers;
+
+        if (endpointId) {
+          endpoint = await API.get(`/endpoints/${endpointId}`);
+        }
+      } catch (err) {
+        content.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+        return;
+      }
+
+      const isEdit = !!endpoint;
+
+      content.innerHTML = `
+        ${renderMessage()}
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">${isEdit ? 'Edit Endpoint' : 'Add Endpoint'}</span>
+            <button class="btn btn-secondary" onclick="Router.navigate('/endpoints')">Cancel</button>
+          </div>
+
+          <form id="endpoint-form" onsubmit="saveEndpoint(event, ${isEdit ? `'${endpointId}'` : 'null'})">
+            <div class="form-group">
+              <label for="id">ID</label>
+              <input type="text" id="id" name="id" value="${endpoint?.id || ''}" ${isEdit ? 'readonly' : 'required'} pattern="^[a-zA-Z_][a-zA-Z0-9_]*$">
+              <div class="form-hint">Letters, numbers, and underscores. Must start with a letter or underscore.</div>
+            </div>
+
+            <div class="form-group">
+              <label for="description">Description</label>
+              <input type="text" id="description" name="description" value="${endpoint?.description || ''}" placeholder="Optional description">
+            </div>
+
+            <div class="form-group">
+              <label>Servers</label>
+              ${servers.length === 0 ? `
+                <div class="empty-state">No servers available. Create a server first.</div>
+              ` : `
+                <div class="checkbox-list">
+                  ${servers.map(s => `
+                    <label class="checkbox-option">
+                      <input type="checkbox" name="servers" value="${s.id}" ${endpoint?.servers.includes(s.id) ? 'checked' : ''}>
+                      ${s.id} ${s.description ? `(${s.description})` : ''}
+                    </label>
+                  `).join('')}
+                </div>
+              `}
+              <div class="form-hint">Select at least one server</div>
+            </div>
+
+            <div class="form-group">
+              <label for="filters">Filters</label>
+              <input type="text" id="filters" name="filters" value="${endpoint?.filters?.join(', ') || ''}" placeholder="*_debug, *_internal">
+              <div class="form-hint">Comma-separated glob patterns for tools to filter out</div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" ${servers.length === 0 ? 'disabled' : ''}>Save Endpoint</button>
+            </div>
+          </form>
+        </div>
+      `;
+    }
+
+    async function saveEndpoint(event, endpointId) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+
+      const servers = formData.getAll('servers');
+      if (servers.length === 0) {
+        State.message = { type: 'error', text: 'Select at least one server' };
+        Router.handle();
+        return;
+      }
+
+      const data = {
+        id: formData.get('id'),
+        servers: servers,
+        description: formData.get('description') || undefined,
+        filters: formData.get('filters') ? formData.get('filters').split(',').map(s => s.trim()).filter(Boolean) : undefined
+      };
+
+      try {
+        if (endpointId) {
+          const { id, ...updateData } = data;
+          await API.put(`/endpoints/${endpointId}`, updateData);
+          State.message = { type: 'success', text: 'Endpoint updated successfully' };
+        } else {
+          await API.post('/endpoints', data);
+          State.message = { type: 'success', text: 'Endpoint created successfully' };
+        }
+        Router.navigate('/endpoints');
+      } catch (err) {
+        State.message = { type: 'error', text: err.message };
+        Router.navigate('/endpoints');
+      }
+    }
+
+    function confirmDeleteEndpoint(id) {
+      const sessions = State.status?.endpoints[id]?.activeSessions ?? 0;
+      showModal(`
+        <div class="modal-title">Delete Endpoint</div>
+        <p>Are you sure you want to delete endpoint "${id}"?</p>
+        ${sessions > 0 ? `<p style="margin-top: 0.5rem; color: var(--color-warning);">${sessions} active session(s) will be disconnected.</p>` : ''}
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+          <button class="btn btn-danger" onclick="deleteEndpoint('${id}')">Delete</button>
+        </div>
+      `);
+    }
+
+    async function deleteEndpoint(id) {
+      hideModal();
+      try {
+        const result = await API.delete(`/endpoints/${id}`);
+        if (result.warning) {
+          State.message = { type: 'warning', text: result.warning };
+        } else {
+          State.message = { type: 'success', text: 'Endpoint deleted successfully' };
+        }
+      } catch (err) {
+        State.message = { type: 'error', text: err.message };
+      }
+      // Use handle() to re-render when already on /endpoints
+      Router.handle();
+    }
+
+    // Settings View
+    async function renderSettings() {
+      const content = document.getElementById('content');
+
+      try {
+        // Fetch status if not already loaded (needed for uptime display)
+        if (!State.status) {
+          State.status = await API.get('/status');
+        }
+        const settings = await API.get('/settings');
+        State.settings = settings;
+
+        content.innerHTML = `
+          ${renderMessage()}
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Global Filters</span>
+            </div>
+            <p style="margin-bottom: 1rem; color: var(--color-muted);">
+              These filter patterns apply to ALL servers unless overridden.
+            </p>
+            <form id="settings-form" onsubmit="saveSettings(event)">
+              <div class="form-group">
+                <label for="filters">Patterns</label>
+                <input type="text" id="filters" name="filters" value="${settings.filters?.join(', ') || ''}" placeholder="*_internal, *_deprecated">
+                <div class="form-hint">Comma-separated glob patterns</div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Configuration File</span>
+            </div>
+            <p style="margin-bottom: 1rem; color: var(--color-muted);">
+              Reload configuration from the server's config file.
+            </p>
+            <button class="btn btn-secondary" onclick="reloadConfig()">Reload Configuration</button>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">About</span>
+            </div>
+            <p>ABC Extension Manager v1.0.0</p>
+            ${State.status ? `<p style="margin-top: 0.5rem; color: var(--color-muted);">Uptime: ${formatUptime(State.status.uptime)}</p>` : ''}
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      }
+    }
+
+    async function saveSettings(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+
+      const data = {
+        filters: formData.get('filters') ? formData.get('filters').split(',').map(s => s.trim()).filter(Boolean) : []
+      };
+
+      try {
+        await API.put('/settings', data);
+        State.message = { type: 'success', text: 'Settings saved successfully' };
+      } catch (err) {
+        State.message = { type: 'error', text: err.message };
+      }
+      // Use handle() instead of navigate() to re-render when already on /settings
+      Router.handle();
+    }
+
+    async function reloadConfig() {
+      try {
+        await API.post('/config/reload');
+        State.message = { type: 'success', text: 'Configuration reloaded successfully' };
+      } catch (err) {
+        State.message = { type: 'error', text: err.message };
+      }
+      // Use handle() instead of navigate() to re-render when already on /settings
+      Router.handle();
+    }
+
+    // =========================================================================
+    // Helpers
+    // =========================================================================
+
+    function renderMessage() {
+      if (!State.message) return '';
+      const msg = State.message;
+      State.message = null;
+      return `<div class="alert alert-${msg.type}">${msg.text}</div>`;
+    }
+
+    function formatUptime(seconds) {
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const s = Math.floor(seconds % 60);
+      if (h > 0) return `${h}h ${m}m ${s}s`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    }
+
+    function copyUrl(url) {
+      navigator.clipboard.writeText(url).then(() => {
+        State.message = { type: 'success', text: 'URL copied to clipboard' };
+        Router.handle();
+      });
+    }
+
+    function showModal(content) {
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-overlay" onclick="hideModal()">
+          <div class="modal" onclick="event.stopPropagation()">
+            ${content}
+          </div>
+        </div>
+      `;
+    }
+
+    function hideModal() {
+      document.getElementById('modal-container').innerHTML = '';
+    }
+
+    // =========================================================================
+    // Status Check
+    // =========================================================================
+
+    async function checkStatus() {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+
+      try {
+        await API.get('/status');
+        dot.className = 'status-dot online';
+        text.textContent = 'Online';
+      } catch {
+        dot.className = 'status-dot offline';
+        text.textContent = 'Offline';
+      }
+    }
+
+    // =========================================================================
+    // Initialize
+    // =========================================================================
+
+    Router.register('/dashboard', renderDashboard);
+    Router.register('/servers', renderServers);
+    Router.register('/endpoints', renderEndpoints);
+    Router.register('/settings', renderSettings);
+
+    Router.init();
+    checkStatus();
+    setInterval(checkStatus, 30000);
+  </script>
+</body>
+</html>

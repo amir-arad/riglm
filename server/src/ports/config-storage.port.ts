@@ -29,6 +29,13 @@ export interface ConfigStoragePort {
    * @returns true if reload successful, false otherwise
    */
   reload(): boolean;
+
+  /**
+   * Save configuration to storage
+   * @param config The configuration to save
+   * @throws Error if configuration is invalid or cannot be saved
+   */
+  save(config: Config): void;
 }
 
 /**

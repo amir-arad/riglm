@@ -1,0 +1,26 @@
+{
+  "servers": {
+    "test_server": {
+      "command": "echo",
+      "args": [
+        "hello"
+      ],
+      "description": "Test server for E2E"
+    },
+    "remote_test": {
+      "url": "http://localhost:9999/sse",
+      "description": "Remote test server"
+    }
+  },
+  "endpoints": {
+    "test_endpoint": {
+      "servers": [
+        "test_server"
+      ],
+      "description": "Test endpoint"
+    }
+  },
+  "filters": [
+    "*_internal"
+  ]
+}

@@ -5,7 +5,7 @@ dotenv.config({
   path: [process.env.NODE_ENV + ".env", ".env"].map((file) =>
     path.join(process.cwd(), file)
   ),
-  override: true,
+  override: false, // Let environment variables take precedence over .env
   debug: process.env.NODE_ENV !== "production",
   encoding: "utf8",
 });

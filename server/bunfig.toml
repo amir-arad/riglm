@@ -1,0 +1,5 @@
+# Bun test configuration
+# Only scan the test/ directory for tests, not the entire project
+# This excludes e2e-ui/ (Playwright tests) which use a different test runner
+[test]
+root = "./test"

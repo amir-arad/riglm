@@ -50,13 +50,7 @@ export const errorHandler =
       });
     }
 
-    // For 404 errors, return simplified response
-    if (statusCode === 404) {
-      res.status(404).json({ error: "Endpoint not found" });
-      return;
-    }
-
-    // For other errors, keep existing response format
+    // Return full error response with status, message, code, data
     res.status(statusCode).json({
       status: "error",
       message: error.message,

@@ -2,7 +2,7 @@
  * File Config Adapter - Implements ConfigStoragePort using file system
  */
 
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import JSON5 from "json5";
 import { ConfiguratorPort } from "../../ports/config-storage.port";
 import { LoggerPort } from "../../ports/logger.port";
@@ -64,6 +64,30 @@ export class FileConfigAdapter implements ConfiguratorPort {
         "Failed to reload configuration. Using previous configuration."
       );
       return false;
+    }
+  }
+
+  /**
+   * Save configuration to the file system
+   * Validates the config before saving.
+   */
+  save(config: Config): void {
+    try {
+      // Validate before saving
+      validateConfig(config);
+
+      const data = JSON.stringify(config, null, 2);
+      writeFileSync(this.configPath, data, "utf8");
+
+      // Update in-memory state
+      this.config = config;
+      this.resolver = new ConfigResolver(config);
+
+      this.logger.info(`Configuration saved to ${this.configPath}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to save configuration: ${message}`);
+      throw error;
     }
   }
 

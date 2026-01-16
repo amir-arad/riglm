@@ -5,3 +5,4 @@ data/
 *.sqlite
 .secrets/*
 local-env/config.local.json5
+test-results/
