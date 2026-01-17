@@ -45,6 +45,10 @@ export class WinstonLoggerAdapter implements LoggerPort {
 export interface LoggerEnvConfig {
   logLevel: string;
   isProduction: boolean;
+  /** Log format: 'pretty' for human-readable, 'json' for machine-parseable */
+  logFormat?: "pretty" | "json";
+  /** Optional path to write logs to file */
+  logFile?: string;
 }
 
 /**
@@ -63,6 +67,7 @@ function ensureDataDirectory(): string {
  */
 function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
   const dataDir = ensureDataDirectory();
+  const logFormat = env.logFormat ?? "pretty";
 
   // Determine console log level (allow info level for lifecycle events in production)
   const consoleLogLevel = env.isProduction ? "info" : env.logLevel;
@@ -73,19 +78,15 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
       ? "debug"
       : env.logLevel;
 
-  const logger = winston.createLogger({
-    level: fileLogLevel,
-    format: winston.format.combine(
-      winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-      winston.format.errors({ stack: true }),
-      winston.format.json()
-    ),
-    defaultMeta: { service: "ROOT" },
-    transports: [
-      // Console transport - reduced verbosity for production
-      new winston.transports.Console({
-        level: consoleLogLevel,
-        format: winston.format.combine(
+  // Create console format based on logFormat option
+  const consoleFormat =
+    logFormat === "json"
+      ? winston.format.combine(
+          winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+          winston.format.errors({ stack: true }),
+          winston.format.json()
+        )
+      : winston.format.combine(
           winston.format.colorize(),
           winston.format.printf(
             ({ timestamp, level, message, service, ...meta }) => {
@@ -100,7 +101,21 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
               }
             }
           )
-        ),
+        );
+
+  const logger = winston.createLogger({
+    level: fileLogLevel,
+    format: winston.format.combine(
+      winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+      winston.format.errors({ stack: true }),
+      winston.format.json()
+    ),
+    defaultMeta: { service: "ROOT" },
+    transports: [
+      // Console transport - reduced verbosity for production
+      new winston.transports.Console({
+        level: consoleLogLevel,
+        format: consoleFormat,
       }),
     ],
   });
@@ -153,6 +168,29 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
         })
       );
     }
+  }
+
+  // Add custom log file if specified via CLI
+  if (env.logFile) {
+    // Ensure parent directory exists
+    const logDir = path.dirname(env.logFile);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+
+    logger.add(
+      new winston.transports.File({
+        filename: env.logFile,
+        level: fileLogLevel,
+        format: winston.format.combine(
+          winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+          winston.format.errors({ stack: true }),
+          winston.format.json()
+        ),
+        maxsize: 50 * 1024 * 1024, // 50MB
+        maxFiles: 5,
+      })
+    );
   }
 
   return logger;

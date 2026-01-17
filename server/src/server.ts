@@ -25,6 +25,12 @@ import {
   createHostsServiceFactory,
   HostsService,
 } from "./application/hosts.service";
+import {
+  isStandaloneMode,
+  loadEmbeddedAssets,
+  createEmbeddedAssetsMiddleware,
+  EmbeddedAssetsMap,
+} from "./embedded-assets";
 
 // ============================================================================
 // Types
@@ -48,7 +54,10 @@ export interface ServerDeps {
   logger: LoggerPort;
   env: {
     port: number;
+    host?: string;
     isProduction: boolean;
+    enableUi?: boolean;
+    enableApi?: boolean;
   };
 }
 
@@ -129,12 +138,35 @@ export class AbcServer {
       })
     );
 
+    // Feature flags with defaults for backward compatibility
+    const enableUi = env.enableUi ?? true;
+    const enableApi = env.enableApi ?? true;
+
     // Static file serving for frontend (client/public)
-    const clientPath = join(__dirname, "../../client/public");
-    app.use(express.static(clientPath));
+    // In standalone mode, serve from embedded assets; otherwise use filesystem
+    if (enableUi) {
+      const standalone = isStandaloneMode();
+      if (standalone) {
+        const embeddedAssets: EmbeddedAssetsMap = await loadEmbeddedAssets();
+        logger.info("Running in standalone mode with embedded assets", {
+          assetCount: embeddedAssets.size,
+        });
+        app.use(createEmbeddedAssetsMiddleware(embeddedAssets) as express.RequestHandler);
+      } else {
+        const clientPath = join(__dirname, "../../client/public");
+        logger.debug("Serving static files from filesystem", { clientPath });
+        app.use(express.static(clientPath));
+      }
+    } else {
+      logger.info("Web UI disabled");
+    }
 
     // Management API routes
-    app.use("/api", makeManagementRoutes(this.configService, logger));
+    if (enableApi) {
+      app.use("/api", makeManagementRoutes(this.configService, logger));
+    } else {
+      logger.info("Management API disabled");
+    }
 
     // MCP host routes
     app.use(makeHostsRoutes(this.hostsServices, logger));
@@ -143,14 +175,15 @@ export class AbcServer {
 
     // Start HTTP server
     this.port = await new Promise<number>((resolve, reject) => {
-      const { port } = env;
-      this.httpServer = app.listen(port, (err) => {
-        if (err) {
-          logger.error("Error starting server", { error: err });
-          return reject(err);
-        }
-        logger.info(`Server running on http://localhost:${port}`);
+      const { port, host = "0.0.0.0" } = env;
+      this.httpServer = app.listen(port, host, () => {
+        const displayHost = host === "0.0.0.0" ? "localhost" : host;
+        logger.info(`Server running on http://${displayHost}:${port}`);
         resolve(port);
+      });
+      this.httpServer.on("error", (err) => {
+        logger.error("Error starting server", { error: err });
+        reject(err);
       });
     });
   }

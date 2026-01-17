@@ -61,12 +61,25 @@ bun run dev          # Development (port 3000)
 # Access at http://localhost:3000/ui
 ```
 
+## Standalone Distribution
+
+Build a single executable with embedded web client (no Bun/Node.js required):
+
+```bash
+cd server
+bun run build:standalone    # Creates dist/abc-server (~102MB)
+
+# Run anywhere
+CONFIG_PATH=/path/to/config.json5 ./dist/abc-server
+```
+
 ## Server Commands
 
 ```bash
 bun install          # Install dependencies
 bun run dev          # Development with hot reload (bun --watch)
 bun run build        # Production build
+bun run build:standalone  # Build standalone executable (no runtime required)
 bun run start        # Run production build
 bun test             # Run all tests (Bun test runner)
 bun run lint         # ESLint

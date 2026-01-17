@@ -16,6 +16,7 @@ This project uses **Bun** as the runtime, package manager, and test runner.
 bun install          # Install dependencies
 bun run dev          # Development with hot reload (bun --watch)
 bun run build        # Production build
+bun run build:standalone  # Build standalone executable with embedded assets
 bun run start        # Run production build
 bun test             # Run all tests (Bun test runner)
 bun run lint         # ESLint
@@ -124,6 +125,7 @@ LOG_LEVEL=info                         # Winston log level (debug, info, warn, e
 
 - `src/index.ts` - Entry point (wires adapters to ports)
 - `src/server.ts` - AbcServer (Express app)
+- `src/embedded-assets.ts` - Embedded static asset serving for standalone builds
 - `src/domain/types.ts` - Configuration and tool types
 - `src/domain/filter-engine.ts` - Tool filtering engine
 - `src/application/hosts.service.ts` - Tool aggregation per endpoint
