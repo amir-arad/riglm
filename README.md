@@ -348,6 +348,131 @@ bun run preview      # Preview production build
 bun run lint         # Run ESLint
 ```
 
+## Development Workflow
+
+This project uses GitHub Actions for CI/CD with automated testing, building, and releasing.
+
+### Branch Workflow
+
+```
+main (protected)
+  │
+  ├── feature/xxx     # New features
+  ├── fix/xxx         # Bug fixes
+  └── chore/xxx       # Maintenance
+```
+
+1. Create a feature branch from `main`
+2. Make changes and commit
+3. Open a Pull Request to `main`
+4. CI runs automatically (lint, typecheck, tests)
+5. After review and CI passes, merge to `main`
+
+### Continuous Integration
+
+On every push and PR to `main`, GitHub Actions runs:
+
+| Check | Command | Description |
+|-------|---------|-------------|
+| Type Check | `bun run typecheck` | TypeScript compilation |
+| Lint | `bun run lint` | ESLint code quality |
+| Test | `bun test` | Unit and integration tests |
+| Build | `bun run build:standalone` | Verify standalone builds |
+
+### Version Management
+
+Version management uses npm's built-in versioning which automatically:
+- Runs pre-version checks (lint, typecheck, tests)
+- Updates `package.json` version
+- Creates a git commit with the version
+- Creates a git tag (e.g., `v1.2.3`)
+- Pushes the commit and tag to origin
+
+**Release commands** (run from `server/` directory):
+
+```bash
+# Patch release (1.0.0 → 1.0.1) - bug fixes
+bun run release:patch
+
+# Minor release (1.0.0 → 1.1.0) - new features, backward compatible
+bun run release:minor
+
+# Major release (1.0.0 → 2.0.0) - breaking changes
+bun run release:major
+```
+
+**Manual version control:**
+
+```bash
+# Set specific version
+npm version 2.0.0-beta.1
+
+# Prerelease versions
+npm version prerelease --preid=beta  # 1.0.0 → 1.0.1-beta.0
+npm version prerelease --preid=rc    # 1.0.0 → 1.0.1-rc.0
+```
+
+### Release Process
+
+When a version tag is pushed (e.g., `v1.2.3`), GitHub Actions automatically:
+
+1. **Builds** standalone executables for all platforms:
+   - `riglm-linux-x64.tar.gz` - Linux (Intel/AMD)
+   - `riglm-linux-arm64.tar.gz` - Linux (ARM)
+   - `riglm-darwin-x64.tar.gz` - macOS (Intel)
+   - `riglm-darwin-arm64.tar.gz` - macOS (Apple Silicon)
+   - `riglm-windows-x64.zip` - Windows
+
+2. **Creates** a GitHub Release with:
+   - All platform binaries attached
+   - Auto-generated release notes from commits
+
+### Complete Release Example
+
+```bash
+# 1. Ensure you're on main with latest changes
+git checkout main
+git pull origin main
+
+# 2. Run release (from server/ directory)
+cd server
+bun run release:minor  # or release:patch, release:major
+
+# This automatically:
+# - Runs lint, typecheck, and tests
+# - Bumps version in package.json (e.g., 1.0.0 → 1.1.0)
+# - Commits: "1.1.0"
+# - Tags: "v1.1.0"
+# - Pushes commit and tag to origin
+# - Triggers GitHub Actions release workflow
+
+# 3. Monitor the release
+# Go to GitHub Actions to watch the build
+# Once complete, binaries are available at:
+# https://github.com/<owner>/riglm/releases/latest
+```
+
+### Downloading Releases
+
+Users can download pre-built binaries from the [Releases page](../../releases):
+
+```bash
+# Linux (x64)
+curl -L https://github.com/<owner>/riglm/releases/latest/download/riglm-linux-x64.tar.gz | tar xz
+chmod +x riglm-linux-x64
+sudo mv riglm-linux-x64 /usr/local/bin/riglm
+
+# macOS (Apple Silicon)
+curl -L https://github.com/<owner>/riglm/releases/latest/download/riglm-darwin-arm64.tar.gz | tar xz
+chmod +x riglm-darwin-arm64
+sudo mv riglm-darwin-arm64 /usr/local/bin/riglm
+
+# Windows (PowerShell)
+Invoke-WebRequest -Uri "https://github.com/<owner>/riglm/releases/latest/download/riglm-windows-x64.zip" -OutFile riglm.zip
+Expand-Archive riglm.zip -DestinationPath .
+# Add to PATH or move to desired location
+```
+
 ## Project Structure
 
 ```
