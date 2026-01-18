@@ -9,6 +9,19 @@ import type { Config } from "../../domain/types";
 import type { ResolvedConfig } from "../config/resolved-config";
 
 // ============================================================================
+// ANSI Colors
+// ============================================================================
+
+const C = {
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  cyan: "\x1b[36m",
+  magenta: "\x1b[35m",
+  white: "\x1b[97m",
+  dim: "\x1b[2m",
+};
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -63,10 +76,15 @@ function createBox(lines: string[], width: number): string[] {
 export function printBanner(info: BannerInfo): void {
   const { version, config, appConfig } = info;
 
+  // Branded logo
+  console.log();
+  console.log(`    ${C.white}{${C.cyan}Ξ${C.white}}${C.reset}`);
+  console.log(`   ${C.bold}RigLM${C.reset}`);
+
   // Header box
   const headerLines = [
-    `Riglm v${version}`,
-    "AI Extension Manager",
+    "The Intelligent Context Router",
+    `v${version}`,
   ];
   const box = createBox(headerLines, 50);
   console.log(box.join("\n"));
@@ -122,7 +140,7 @@ export function printBanner(info: BannerInfo): void {
  */
 export function printQuietBanner(config: ResolvedConfig): void {
   const baseUrl = config.host === "0.0.0.0" ? "localhost" : config.host;
-  console.log(`Riglm listening on http://${baseUrl}:${config.port}`);
+  console.log(`RigLM listening on http://${baseUrl}:${config.port}`);
 }
 
 /**
@@ -131,7 +149,7 @@ export function printQuietBanner(config: ResolvedConfig): void {
 export function printDryRun(info: BannerInfo): void {
   const { version, config, appConfig } = info;
 
-  console.log(`Riglm v${version} - Dry Run`);
+  console.log(`RigLM v${version} - Dry Run`);
   console.log("═".repeat(50));
   console.log();
 

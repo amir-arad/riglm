@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-RigLM is a TypeScript-based MCP (Model Context Protocol) aggregator server. It acts as a unified platform that aggregates multiple MCP servers into a single endpoint. This allows users to define their LLM extensions in one place and connect from any MCP-compatible client. The project includes a command-line interface (CLI) for starting the server, validating the configuration, and initializing a new configuration file. It also provides a web UI for monitoring and management.
+RigLM is a TypeScript-based MCP (Model Context Protocol) router server. It acts as a unified platform that routes multiple MCP servers through a single endpoint. This allows users to define their LLM extensions in one place and connect from any MCP-compatible client. The project includes a command-line interface (CLI) for starting the server, validating the configuration, and initializing a new configuration file. It also provides a web UI for monitoring and management.
 
 The project is built with Bun and uses Express to create the server. It has a clear hexagonal architecture, with a separation of concerns between the domain logic, application services, and adapters for external technologies like HTTP and storage.
 

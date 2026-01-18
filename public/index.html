@@ -4,21 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <title>Riglm</title>
+  <meta property="og:title" content="RigLM - The Intelligent Context Router for AI">
+  <meta property="og:description" content="The central multiplexer for your MCP ecosystem.">
+  <meta property="og:image" content="/riglm-og-image.png">
+  <meta property="og:type" content="website">
+  <title>RigLM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --color-primary: #4F46E5;
-      --color-primary-hover: #4338CA;
-      --color-success: #10B981;
+      /* Foundation (Neon Infrastructure) */
+      --color-bg: #0A0E17;
+      --color-card: #161B22;
+
+      /* Energy */
+      --color-primary: #00F0FF;
+      --color-primary-hover: #00D4E0;
+      --color-secondary: #7B61FF;
+
+      /* Text */
+      --color-text: #F0F6FC;
+      --color-muted: #8B949E;
+      --color-border: #30363D;
+
+      /* Status */
+      --color-success: #22C55E;
       --color-danger: #EF4444;
       --color-warning: #F59E0B;
-      --color-bg: #F9FAFB;
-      --color-card: #FFFFFF;
-      --color-text: #111827;
-      --color-muted: #6B7280;
-      --color-border: #E5E7EB;
+
       --radius: 8px;
-      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
 
     * {
@@ -28,7 +44,7 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--color-bg);
       color: var(--color-text);
       min-height: 100vh;
@@ -45,9 +61,13 @@
     }
 
     .logo {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
       font-size: 1.25rem;
-      font-weight: 600;
-      color: var(--color-primary);
+      font-weight: 700;
+      background: linear-gradient(90deg, #00F0FF, #7B61FF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .status-indicator {
@@ -180,7 +200,7 @@
     }
 
     tr:hover {
-      background: var(--color-bg);
+      background: var(--color-card);
     }
 
     /* Buttons */
@@ -207,7 +227,7 @@
     }
 
     .btn-secondary {
-      background: var(--color-bg);
+      background: var(--color-card);
       color: var(--color-text);
       border: 1px solid var(--color-border);
     }
@@ -249,12 +269,14 @@
       border-radius: var(--radius);
       font-size: 0.875rem;
       font-family: inherit;
+      background: var(--color-bg);
+      color: var(--color-text);
     }
 
     input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--color-primary);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+      box-shadow: 0 0 0 3px rgba(0, 240, 255, 0.15);
     }
 
     textarea {
@@ -316,18 +338,21 @@
     }
 
     .alert-success {
-      background: #D1FAE5;
-      color: #065F46;
+      background: rgba(34, 197, 94, 0.15);
+      color: #22C55E;
+      border: 1px solid rgba(34, 197, 94, 0.3);
     }
 
     .alert-error {
-      background: #FEE2E2;
-      color: #991B1B;
+      background: rgba(239, 68, 68, 0.15);
+      color: #EF4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
     .alert-warning {
-      background: #FEF3C7;
-      color: #92400E;
+      background: rgba(245, 158, 11, 0.15);
+      color: #F59E0B;
+      border: 1px solid rgba(245, 158, 11, 0.3);
     }
 
     /* Modal */
@@ -388,11 +413,12 @@
     }
 
     .url-item code {
-      background: var(--color-bg);
+      background: var(--color-card);
       padding: 0.25rem 0.5rem;
       border-radius: 4px;
-      font-family: monospace;
+      font-family: 'JetBrains Mono', monospace;
       flex: 1;
+      border: 1px solid var(--color-border);
     }
 
     /* Type badge */
@@ -405,13 +431,15 @@
     }
 
     .badge-local {
-      background: #DBEAFE;
-      color: #1D4ED8;
+      background: rgba(0, 240, 255, 0.15);
+      color: #00F0FF;
+      border: 1px solid rgba(0, 240, 255, 0.3);
     }
 
     .badge-remote {
-      background: #E0E7FF;
-      color: #4338CA;
+      background: rgba(123, 97, 255, 0.15);
+      color: #7B61FF;
+      border: 1px solid rgba(123, 97, 255, 0.3);
     }
 
     /* Info section */
@@ -432,7 +460,7 @@
 <body>
   <!-- Header -->
   <header>
-    <div class="logo">Riglm</div>
+    <div class="logo">{Ξ} RigLM</div>
     <div class="status-indicator">
       <span class="status-dot" id="status-dot"></span>
       <span id="status-text">Checking...</span>
@@ -1132,7 +1160,7 @@
             <div class="card-header">
               <span class="card-title">About</span>
             </div>
-            <p>Riglm v1.0.0</p>
+            <p>RigLM v1.0.0</p>
             ${State.status ? `<p style="margin-top: 0.5rem; color: var(--color-muted);">Uptime: ${formatUptime(State.status.uptime)}</p>` : ''}
           </div>
         `;

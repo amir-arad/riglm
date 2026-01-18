@@ -1,15 +1,37 @@
-# RigLM - An AI Extension Manager
+<div align="center">
 
-A unified platform that aggregates multiple MCP (Model Context Protocol) servers into a single endpoint. Define your LLM extensions in one place, then connect from any MCP-compatible client (Claude Code, Cursor, Cline, etc.).
+<pre style="font-family: 'JetBrains Mono', monospace; color: #00F0FF; line-height: 1.2;">
+   {Ξ}
+  RigLM
+</pre>
+
+# The Intelligent Context Router for AI
+
+[![License: ISC](https://img.shields.io/badge/License-ISC-0A0E17.svg?style=flat-square&labelColor=161B22&color=8B949E)](https://opensource.org/licenses/ISC)
+[![MCP Ready](https://img.shields.io/badge/MCP-Ready-0A0E17.svg?style=flat-square&labelColor=161B22&color=00F0FF)](https://modelcontextprotocol.io)
+[![Status: Active](https://img.shields.io/badge/Status-Active-0A0E17.svg?style=flat-square&labelColor=161B22&color=22C55E)](https://github.com/amir-arad/riglm)
+
+<p style="font-size: 1.1em; color: #8B949E; max-width: 600px; margin: auto;">
+The central multiplexer for your Model Context Protocol ecosystem. Define your tools once, then dynamically route fine-grained context subsets to any client or session.
+</p>
+
+<br/>
+
+<a href="#getting-started"><img src="https://img.shields.io/badge/Get_Started-%E2%86%92-00F0FF?style=for-the-badge&labelColor=0A0E17&color=00F0FF" alt="Get Started"></a>
+<a href="#documentation"><img src="https://img.shields.io/badge/Documentation-%7B%CE%9E%7D-7B61FF?style=for-the-badge&labelColor=0A0E17&color=7B61FF" alt="Documentation"></a>
+
+</div>
+
+---
 
 ## Features
 
-- **MCP Server Aggregation** - Combine multiple MCP servers (local or remote) into unified endpoints
+- **Intelligent Context Routing** - Route multiple MCP servers (local or remote) through unified endpoints
 - **Tool Namespacing** - Tools are automatically prefixed with server names (`github-list_repos`) to avoid conflicts
 - **Flexible Configuration** - JSON5 config with support for local (stdio) and remote (SSE/HTTP) servers
 - **Tool Filtering** - Filter out unwanted tools at global, endpoint, or server level
 - **Multiple Endpoints** - Create different endpoints for different use cases (development, production, etc.)
-- **Web UI** - Dashboard for monitoring and management
+- **Web UI** - Dark-themed dashboard for monitoring and management
 
 ## Installation
 
@@ -89,26 +111,40 @@ riglm validate -c /path/to/config.json5
 
 ## Architecture
 
-```
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  Claude Code    │  │     Cursor      │  │     Cline       │
-│  (MCP Client)   │  │  (MCP Client)   │  │  (MCP Client)   │
-└────────┬────────┘  └────────┬────────┘  └────────┬────────┘
-         │                    │                    │
-         └──────────────┬─────┴────────────────────┘
-                        │  SSE/HTTP
-                        v
-              ┌─────────────────────┐
-              │   Extension Manager │
-              │   (Express Server)  │
-              └──────────┬──────────┘
-                         │
-         ┌───────────────┼───────────────┐
-         v               v               v
-    ┌─────────┐    ┌─────────┐    ┌─────────┐
-    │ MCP Srv │    │ MCP Srv │    │ MCP Srv │
-    │ (stdio) │    │ (stdio) │    │  (SSE)  │
-    └─────────┘    └─────────┘    └─────────┘
+### The Switchboard Philosophy
+
+RigLM is not just an aggregator; it is an active routing layer.
+
+```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#0A0E17', 'edgeLabelBackground':'#161B22', 'tertiaryColor': '#161B22'}}}%%
+graph LR
+    subgraph INPUTS ["How you define them"]
+        A[🛢️ Prod DB] :::mcp
+        B[📁 Filesystem] :::mcp
+        C[💬 Slack History] :::mcp
+    end
+
+    subgraph RIGLM ["{Ξ} RigLM Router"]
+        Router[Context Multiplexer] :::router
+    end
+
+    subgraph OUTPUTS ["How you use them"]
+        Session1("Session A: Junior Dev (Cursor)") :::session
+        Session2("Session B: Architect (Claude)") :::session
+    end
+
+    A -.->|Full Context| Router
+    B ====>|Full Context| Router
+    C ====>|Full Context| Router
+
+    Router ==="Filtered Subset (Read Only)"==> Session1
+    Router ===="Full R/W Access"====> Session2
+
+    classDef mcp fill:#161B22,stroke:#00F0FF,color:#fff,stroke-width:1px;
+    classDef router fill:#0A0E17,stroke:#7B61FF,color:#00F0FF,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef session fill:#161B22,stroke:#8B949E,color:#fff;
+    linkStyle 3,4 stroke:#00F0FF,stroke-width:2px;
+    linkStyle 0,1,2 stroke:#8B949E,stroke-width:1px;
 ```
 
 ## Prerequisites

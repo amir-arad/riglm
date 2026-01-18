@@ -2,7 +2,7 @@
   "name": "riglm",
   "version": "1.0.0",
   "type": "module",
-  "description": "MCP aggregator server for AI Extension Manager",
+  "description": "MCP router for AI Extension Manager",
   "main": "dist/index.js",
   "scripts": {
     "dev": "bun --watch src/index.ts",
@@ -27,7 +27,7 @@
   },
   "keywords": [
     "mcp",
-    "aggregator",
+    "router",
     "server",
     "typescript",
     "express"
