@@ -2,7 +2,7 @@
 
 ## Overview
 
-Transform the MCP aggregator (Riglm) into a full-featured Personal AI Extension Manager with dynamic extension control via Web UI.
+Transform the MCP router (RigLM) into a full-featured Personal AI Extension Manager with dynamic extension control via Web UI.
 
 ## Phase Summary
 
