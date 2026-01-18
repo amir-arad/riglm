@@ -17,7 +17,13 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "deadcode": "knip",
-    "circular": "madge --circular --extensions ts src/"
+    "circular": "madge --circular --extensions ts src/",
+    "preversion": "bun run lint && bun run typecheck && bun test",
+    "version": "cd .. && git add -A",
+    "postversion": "git push && git push --tags",
+    "release:patch": "npm version patch",
+    "release:minor": "npm version minor",
+    "release:major": "npm version major"
   },
   "keywords": [
     "mcp",
