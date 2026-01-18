@@ -119,32 +119,32 @@ RigLM is not just an aggregator; it is an active routing layer.
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#0A0E17', 'edgeLabelBackground':'#161B22', 'tertiaryColor': '#161B22'}}}%%
 graph LR
     subgraph INPUTS ["How you define them"]
-        A[🛢️ Prod DB] :::mcp
-        B[📁 Filesystem] :::mcp
-        C[💬 Slack History] :::mcp
+        A["🛢️ Prod DB"]:::mcp
+        B["📁 Filesystem"]:::mcp
+        C["💬 Slack History"]:::mcp
     end
 
     subgraph RIGLM ["{Ξ} RigLM Router"]
-        Router[Context Multiplexer] :::router
+        Router[Context Multiplexer]:::router
     end
 
     subgraph OUTPUTS ["How you use them"]
-        Session1("Session A: Junior Dev (Cursor)") :::session
-        Session2("Session B: Architect (Claude)") :::session
+        Session1("Session A: Junior Dev (Cursor)"):::session
+        Session2("Session B: Architect (Claude)"):::session
     end
 
-    A -.->|Full Context| Router
-    B ====>|Full Context| Router
-    C ====>|Full Context| Router
+    A -->|Full Context| Router
+    B -->|Full Context| Router
+    C -->|Full Context| Router
 
-    Router ==="Filtered Subset (Read Only)"==> Session1
-    Router ===="Full R/W Access"====> Session2
+    Router -->|Filtered Subset| Session1
+    Router -->|Full Access| Session2
 
-    classDef mcp fill:#161B22,stroke:#00F0FF,color:#fff,stroke-width:1px;
-    classDef router fill:#0A0E17,stroke:#7B61FF,color:#00F0FF,stroke-width:2px,stroke-dasharray: 5 5;
-    classDef session fill:#161B22,stroke:#8B949E,color:#fff;
-    linkStyle 3,4 stroke:#00F0FF,stroke-width:2px;
-    linkStyle 0,1,2 stroke:#8B949E,stroke-width:1px;
+    classDef mcp fill:#161B22,stroke:#00F0FF,color:#fff,stroke-width:1px
+    classDef router fill:#0A0E17,stroke:#7B61FF,color:#00F0FF,stroke-width:2px
+    classDef session fill:#161B22,stroke:#8B949E,color:#fff
+    linkStyle 0,1,2 stroke:#8B949E,stroke-width:1px
+    linkStyle 3,4 stroke:#00F0FF,stroke-width:2px
 ```
 
 ## Prerequisites
