@@ -352,22 +352,6 @@ bun run lint         # Run ESLint
 
 This project uses GitHub Actions for CI/CD with automated testing, building, and releasing.
 
-### Branch Workflow
-
-```
-main (protected)
-  │
-  ├── feature/xxx     # New features
-  ├── fix/xxx         # Bug fixes
-  └── chore/xxx       # Maintenance
-```
-
-1. Create a feature branch from `main`
-2. Make changes and commit
-3. Open a Pull Request to `main`
-4. CI runs automatically (lint, typecheck, tests)
-5. After review and CI passes, merge to `main`
-
 ### Continuous Integration
 
 On every push and PR to `main`, GitHub Actions runs:
