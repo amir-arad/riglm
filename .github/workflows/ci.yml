@@ -29,6 +29,12 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      - name: Dead code check
+        run: bun run deadcode
+
+      - name: Circular dependency check
+        run: bun run circular
+
       - name: Run tests
         run: bun test
 

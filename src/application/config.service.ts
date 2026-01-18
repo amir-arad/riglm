@@ -85,18 +85,9 @@ const UpdateSettingsInputSchema = z.object({
   filters: FiltersSchema.optional(),
 });
 
-// ============================================================================
-// Types
-// ============================================================================
-
-export type CreateServerInput = z.infer<typeof CreateServerInputSchema>;
-export type CreateLocalServerInput = z.infer<typeof CreateLocalServerInputSchema>;
-export type CreateRemoteServerInput = z.infer<typeof CreateRemoteServerInputSchema>;
-export type UpdateLocalServerInput = z.infer<typeof UpdateLocalServerInputSchema>;
-export type UpdateRemoteServerInput = z.infer<typeof UpdateRemoteServerInputSchema>;
-export type CreateEndpointInput = z.infer<typeof CreateEndpointInputSchema>;
-export type UpdateEndpointInput = z.infer<typeof UpdateEndpointInputSchema>;
-export type UpdateSettingsInput = z.infer<typeof UpdateSettingsInputSchema>;
+// Internal type aliases (inferred from schemas, used within this file)
+type CreateLocalServerInput = z.infer<typeof CreateLocalServerInputSchema>;
+type CreateRemoteServerInput = z.infer<typeof CreateRemoteServerInputSchema>;
 
 /** Server object with ID for API responses */
 export interface ServerWithId {

@@ -14,9 +14,7 @@
     "**/index.ts"
   ],
   "ignoreDependencies": [
-    "bun-types",
-    "@typescript-eslint/eslint-plugin",
-    "@typescript-eslint/parser"
+    "bun-types"
   ],
   "ignoreBinaries": [
     "dist/index.js"

@@ -21,7 +21,6 @@ export const TemplateNameSchema = z.enum(["minimal", "standard", "full"]);
 export type TemplateName = z.infer<typeof TemplateNameSchema>;
 
 export const OutputFormatSchema = z.enum(["text", "json"]);
-export type OutputFormat = z.infer<typeof OutputFormatSchema>;
 
 // ============================================================================
 // Command Schemas

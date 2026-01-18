@@ -173,13 +173,3 @@ export type ToolHandler = (
   args: Record<string, unknown> | undefined
 ) => Promise<ToolResponse>;
 
-// ============================================================================
-// Session Types
-// ============================================================================
-
-/** Session metadata */
-export interface SessionInfo {
-  sessionId: string;
-  createdAt: Date;
-  lastActivity: Date;
-}

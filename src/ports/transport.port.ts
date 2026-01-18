@@ -105,28 +105,4 @@ export interface ClientTransportFactory {
   createHttpTransport(config: HttpTransportConfig): TransportPort;
 }
 
-/**
- * Abstract HTTP response interface for server transports
- * Matches Express Response shape without coupling to Express
- */
-export interface HttpResponsePort {
-  write(data: string): boolean;
-  end(): void;
-  on(event: string, listener: (...args: unknown[]) => void): this;
-  writeHead?(statusCode: number, headers?: Record<string, string>): this;
-}
 
-/**
- * Factory for creating server-side transports (accepting MCP client connections)
- */
-export interface ServerTransportFactory {
-  /**
-   * Create an SSE server transport for incoming client connections
-   * @param messagePath The path where POST messages should be sent
-   * @param response The HTTP response object to stream events to
-   */
-  createSseServerTransport(
-    messagePath: string,
-    response: HttpResponsePort
-  ): TransportPort;
-}

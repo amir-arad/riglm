@@ -18,8 +18,6 @@ export type {
   SseTransportConfig,
   HttpTransportConfig,
   ClientTransportFactory,
-  ServerTransportFactory,
-  HttpResponsePort,
 } from "./transport.port";
 
 // MCP Client

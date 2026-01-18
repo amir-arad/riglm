@@ -162,13 +162,3 @@ export class ExtensionRegistry {
   }
 }
 
-/**
- * Create and initialize an ExtensionRegistry
- * @param deps Registry dependencies
- * @returns Initialized registry
- */
-export function createExtensionRegistry(deps: ExtensionRegistryDeps): ExtensionRegistry {
-  const registry = new ExtensionRegistry(deps);
-  registry.init();
-  return registry;
-}

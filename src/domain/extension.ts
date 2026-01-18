@@ -63,9 +63,6 @@ const CreateExtensionInputSchema = ExtensionSchema.omit({
 // Derived Types
 // ============================================================================
 
-/** Extension type discriminator - only mcp-server for Phase 1 */
-export type ExtensionType = "mcp-server";
-
 /** Local MCP server configuration (stdio transport) */
 export type McpServerLocalConfig = z.infer<typeof McpServerLocalConfigSchema>;
 

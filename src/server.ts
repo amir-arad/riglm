@@ -12,7 +12,6 @@ import { LoggerPort } from "./ports/logger.port";
 import { McpClientFactory } from "./ports/mcp-client.port";
 import { McpServerFactory } from "./ports/mcp-server.port";
 import { ClientTransportFactory } from "./ports/transport.port";
-import { Config } from "./domain/types";
 import { errorHandler, notFoundHandler, makeManagementRoutes } from "./adapters/http";
 import { Services } from "./etc/service";
 import { makeHostsRoutes } from "./adapters/http/routes";
@@ -37,13 +36,6 @@ import {
 // ============================================================================
 
 /**
- * Interface for configuration access (legacy compatibility)
- */
-export interface ServerConfigurator {
-  get(): Config;
-}
-
-/**
  * Server dependencies using ports
  */
 export interface ServerDeps {
@@ -61,17 +53,6 @@ export interface ServerDeps {
   };
 }
 
-/**
- * Legacy server options (for backward compatibility)
- */
-export interface ServerOptions {
-  config: ServerConfigurator;
-  env: {
-    port: number;
-    isProduction: boolean;
-  };
-  logger: LoggerPort;
-}
 
 // ============================================================================
 // Server Class

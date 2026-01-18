@@ -8,7 +8,6 @@ export type { LoggerEnvConfig } from "./logging/winston.adapter";
 
 // Storage
 export { FileConfigAdapter, createFileConfigAdapter } from "./storage/file-config.adapter";
-export { FileExtensionAdapter, createFileExtensionAdapter } from "./storage/file-extension.adapter";
 
 // MCP
 export {
