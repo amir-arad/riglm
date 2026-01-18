@@ -43,7 +43,7 @@ export interface ConfigStoragePort {
  */
 export interface ConfiguratorPort extends ConfigStoragePort {
   /**
-   * Get filters for a specific server/endpoint
+   * Get filters for a specific server and/or endpoint
    * Priority: server filters > endpoint filters > global filters
    * @param serverId Optional server identifier
    * @param endpointId Optional endpoint identifier

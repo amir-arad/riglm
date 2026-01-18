@@ -16,6 +16,7 @@ A unified platform where users define their LLM extensions (MCP servers, knowled
 - [X] Migrated to Bun runtime (faster startup, native TypeScript, built-in test runner)
 - [X] Architecture refactor - hexagonal/ports-adapters pattern
 - [X] Extension registry - file-based CRUD for extensions (Zod validation)
+- [X] Repository flattened - merged server/ into root
 
 **Upcoming:** Phase 2 (Dynamic State), Phase 3 (WebSocket), Phase 4 (Client Redesign)
 
@@ -27,16 +28,16 @@ See `docs/implementation-plan.md` for full roadmap.
 riglm/
 ├── .claude/         # Claude Code configuration
 │   └── skills/      # Project-specific skills (mcp-testing)
-├── server/          # Express backend - MCP aggregator
-│   └── src/         # Hexagonal architecture (ports/adapters pattern)
-│       ├── ports/       # Abstract interfaces
-│       ├── domain/      # Business logic
-│       ├── adapters/    # Implementations
-│       └── application/ # Services
-├── client/          # Static Web UI
-│   └── public/      # Vanilla HTML/CSS/JS (single-page)
+├── src/             # Hexagonal architecture (ports/adapters pattern)
+│   ├── ports/       # Abstract interfaces
+│   ├── domain/      # Business logic
+│   ├── adapters/    # Implementations
+│   └── application/ # Services
+├── test/            # Unit and E2E tests
+├── e2e-ui/          # Playwright UI tests
+├── public/          # Static Web UI (vanilla HTML/CSS/JS)
 ├── docs/            # Documentation and plans
-└── schemas/         # Configuration schema
+└── data/            # Runtime data (config, extensions, logs)
 ```
 
 ## Tech Stack
@@ -52,14 +53,10 @@ riglm/
 ## Quick Start
 
 ```bash
-# Server
-cd server
 bun install
-bun run dev          # Development (port 3000)
+bun run dev          # Development with hot reload (port 3000)
 
-# Client (served by Express)
-# Static files in client/public/ are served at /ui
-# Access at http://localhost:3000/ui
+# Web UI served at http://localhost:3000
 ```
 
 ## Standalone Distribution
@@ -67,14 +64,13 @@ bun run dev          # Development (port 3000)
 Build a single executable with embedded web client (no Bun/Node.js required):
 
 ```bash
-cd server
 bun run build:standalone    # Creates dist/riglm (~102MB)
 
 # Run anywhere
 CONFIG_PATH=/path/to/config.json5 ./dist/riglm
 ```
 
-## Server Commands
+## Commands
 
 ```bash
 bun install          # Install dependencies
@@ -87,16 +83,15 @@ bun run lint         # ESLint
 bun run typecheck    # Type check
 ```
 
-## Client
+## Web UI
 
-The web UI is a vanilla HTML/CSS/JS single-page application in `client/public/`. It is served by the Express server at `/ui` - no separate build step required.
+The web UI is a vanilla HTML/CSS/JS single-page application in `public/`. It is served by the Express server at the root path - no separate build step required.
 
 ## Testing
 
-The server has 173 tests using Bun's built-in test runner:
+173 tests using Bun's built-in test runner:
 
 ```bash
-cd server
 bun test                       # Run all tests
 bun test test/filter.test.ts   # Run specific test file
 ```
@@ -112,7 +107,7 @@ Test structure:
 
 ## Configuration
 
-Config file: `server/data/config.local.json5`
+Config file: `data/config.local.json5`
 
 ```json5
 {
@@ -188,4 +183,3 @@ This project includes the `mcp-testing` skill in `.claude/skills/` for MCP serve
 - `docs/implementation-plan.md` - Detailed implementation roadmap
 - `docs/notes.md` - Assumptions, insights, and technical debt
 - `docs/mcp-sdk-reference.md` - MCP SDK usage reference
-- `server/CLAUDE.md` - Server-specific documentation

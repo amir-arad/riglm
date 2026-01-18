@@ -142,7 +142,7 @@ export class RiglmServer {
     const enableUi = env.enableUi ?? true;
     const enableApi = env.enableApi ?? true;
 
-    // Static file serving for frontend (client/public)
+    // Static file serving for frontend (public/)
     // In standalone mode, serve from embedded assets; otherwise use filesystem
     if (enableUi) {
       const standalone = isStandaloneMode();
@@ -153,7 +153,7 @@ export class RiglmServer {
         });
         app.use(createEmbeddedAssetsMiddleware(embeddedAssets) as express.RequestHandler);
       } else {
-        const clientPath = join(__dirname, "../../client/public");
+        const clientPath = join(__dirname, "../public");
         logger.debug("Serving static files from filesystem", { clientPath });
         app.use(express.static(clientPath));
       }

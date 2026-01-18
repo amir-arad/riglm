@@ -108,7 +108,7 @@ export class ConfigResolver {
 /**
  * Extended config schema with cross-reference validation.
  * Validates that:
- * 1. All server/endpoint keys are valid identifiers
+ * 1. All server and endpoint keys are valid identifiers
  * 2. All endpoint server references point to existing servers
  */
 const ValidatedConfigSchema = ConfigSchema.superRefine((config, ctx) => {

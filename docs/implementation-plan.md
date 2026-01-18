@@ -21,7 +21,8 @@ Transform the MCP aggregator (Riglm) into a full-featured Personal AI Extension 
 
 ### 1.1 Workspace Cleanup ✅
 - Removed unrelated projects (FLUJO, cml, mcp-memory-zep, etc.)
-- Kept: server/, client/, docs/, schemas/
+- Flattened repository: merged server/ into root
+- Removed: client/ (replaced by vanilla Web UI in public/), schemas/
 
 ### 1.2 Config Consolidation ✅
 - Simplified to 2-tier format: Servers → Endpoints
@@ -41,13 +42,13 @@ File-based extension CRUD operations with Zod validation.
 
 **Files:**
 ```
-server/src/extension-manager/
+src/extension-manager/
 ├── index.ts                 # Public exports
 └── extension.registry.ts    # CRUD operations
 ```
 
-**Domain types:** `server/src/domain/extension.ts` (Zod schemas)
-**Storage adapter:** `server/src/adapters/storage/file-extension.adapter.ts`
+**Domain types:** `src/domain/extension.ts` (Zod schemas)
+**Storage adapter:** `src/adapters/storage/file-extension.adapter.ts`
 
 **Data Model:**
 ```typescript
@@ -76,7 +77,7 @@ interface RemoteServerConfig {
 }
 ```
 
-**Storage:** `server/data/extensions.json`
+**Storage:** `data/extensions.json`
 
 **API:**
 ```typescript
@@ -131,7 +132,7 @@ When extension is toggled:
 
 ### 2.3 Management REST API
 
-**New File:** `server/src/api/management.controller.ts`
+**New File:** `src/api/management.controller.ts`
 
 **Endpoints:**
 ```
@@ -155,7 +156,7 @@ DELETE /api/sessions/:id            # Force disconnect
 
 ### 3.1 WebSocket Server
 
-**New File:** `server/src/api/websocket.controller.ts`
+**New File:** `src/api/websocket.controller.ts`
 
 **Dependencies:** Add `ws` package
 
@@ -199,31 +200,33 @@ Emit events from:
 
 ## Phase 4: Client Redesign
 
-**Goal:** New Web UI for extension and session management
+**Goal:** Enhanced Web UI for extension and session management
 
-### 4.1 Remove Base44 Dependencies
+### 4.1 Current State
 
-**Delete:**
-- `client/src/api/app-sdk.js`
-- `client/src/api/entities.js`
-- Base44-specific pages
+The current Web UI is a vanilla HTML/CSS/JS implementation in `public/`. This may be enhanced or replaced with a React-based solution depending on feature requirements.
 
-**Keep:**
-- `client/src/components/ui/` (shadcn components)
-- Vite + React + Tailwind setup
+### 4.2 API Client (if React UI is adopted)
 
-### 4.2 New API Client
-
-**New Files:**
+**Potential Structure:**
 ```
-client/src/api/
-├── client.ts           # Base fetch client
-├── extensions.api.ts   # Extension CRUD
-├── sessions.api.ts     # Session queries
-└── websocket.ts        # Real-time connection
+src/web/                      
+├── api/
+│   ├── client.ts             # Base fetch client
+│   ├── extensions.api.ts     # Extension CRUD
+│   ├── sessions.api.ts       # Session queries
+│   └── websocket.ts          # Real-time connection
+├── pages/
+│   ├── Extensions.tsx
+│   ├── Sessions.tsx
+│   └── Dashboard.tsx
+└── hooks/
+    ├── useExtensions.ts
+    ├── useSessions.ts
+    └── useWebSocket.ts
 ```
 
-### 4.3 New Pages
+### 4.3 Features
 
 **Extensions Page (`/extensions`):**
 - List all defined extensions
@@ -239,24 +242,16 @@ client/src/api/
 - Save/load extension configurations
 - Quick-switch between setups
 
-### 4.4 Hooks
-
-```typescript
-// client/src/hooks/
-useExtensions()    // CRUD + list
-useSessions()      // Live session list
-useWebSocket()     // Real-time updates
-```
-
 ---
 
 ## File Structure (Current + Planned)
 
 ```
-server/
+riglm/                            # Flattened monorepo (no server/ or client/ subdirs)
 ├── src/
 │   ├── index.ts                  # Entry point (wires adapters)
 │   ├── server.ts                 # RiglmServer (Express app)
+│   ├── embedded-assets.ts        # Standalone binary asset embedding
 │   │
 │   ├── ports/                    # Interface contracts ✅
 │   │   ├── logger.port.ts
@@ -286,53 +281,37 @@ server/
 │   │   ├── index.ts
 │   │   └── extension.registry.ts
 │   │
-│   ├── adapters/http/            # Phase 2 (existing, extend for management)
-│   │   └── management.routes.ts  # Management REST API (Phase 2)
-│   │
 │   ├── api/                      # Phase 3 (planned)
 │   │   └── websocket.controller.ts
 │   │
 │   ├── host-gateway/             # Session management ✅
 │   │   └── transport-session-manager.ts
 │   │
+│   ├── cli/                      # CLI commands ✅
+│   │
 │   └── etc/                      # Utilities ✅
 │       ├── env.ts
-│       ├── logger.ts
 │       └── service.ts
+│
+├── public/                       # Vanilla Web UI (HTML/CSS/JS) ✅
+│   ├── index.html
+│   └── favicon.svg
 │
 ├── data/
 │   └── extensions.json           # Phase 1.4 ✅
 │
-└── test/
-    ├── filter.test.ts
-    ├── e2e/
-    ├── fixtures/
-    └── mocks/
-
-client/
-├── src/
-│   ├── api/                      # Phase 4 (planned)
-│   │   ├── client.ts
-│   │   ├── extensions.api.ts
-│   │   ├── sessions.api.ts
-│   │   └── websocket.ts
-│   │
-│   ├── pages/                    # Existing (placeholder)
-│   │   ├── Dashboard.jsx
-│   │   ├── Servers.jsx
-│   │   ├── Endpoints.jsx
-│   │   └── ...
-│   │
-│   ├── hooks/                    # Phase 4 (planned)
-│   │   ├── useExtensions.ts
-│   │   ├── useSessions.ts
-│   │   └── useWebSocket.ts
-│   │
-│   └── components/
-│       └── ui/                   # shadcn/ui components ✅
+├── test/                         # Unit and E2E tests ✅
+│   ├── filter.test.ts
+│   ├── e2e/
+│   ├── fixtures/
+│   └── mocks/
 │
-└── ...
+├── e2e-ui/                       # Playwright UI tests ✅
+│
+└── docs/                         # Documentation
 ```
+
+**Note:** The `client/` directory with React/shadcn was removed. The current Web UI is a vanilla HTML/CSS/JS implementation in `public/`. Phase 4 may introduce a new React-based UI if needed.
 
 ---
 
@@ -376,12 +355,13 @@ client/
 }
 ```
 
-### Client (Phase 4)
+### Client (Phase 4 - if React UI is adopted)
 ```json
 {
   "dependencies": {
-    // Remove: "b44-sdk" or similar Base44 packages
-    // Keep: react, tailwind, shadcn components
+    "react": "^18.x",
+    "react-dom": "^18.x",
+    "@tanstack/react-query": "^5.x"
   }
 }
 ```
@@ -390,7 +370,7 @@ client/
 
 ## Risk Mitigation
 
-1. **Test suite broken** - Fix chai ESM issue before Phase 2
+1. **Test suite** - ✅ Migrated to Bun's built-in test runner (173 tests passing)
 2. **MCP client compatibility** - Test with Claude Code, Cursor, Cline
 3. **WebSocket reliability** - Add reconnection logic in client
 4. **State sync** - Handle race conditions in toggle operations
