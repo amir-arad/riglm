@@ -2,8 +2,11 @@
  * SSE Server Transport Adapter - Wraps MCP SDK SSEServerTransport
  */
 
+import { IncomingMessage, ServerResponse } from "http";
+
+import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import { SdkTransportPort, HttpResponsePort } from "../../../ports/transport.port";
+import { SdkTransportPort } from "../../../ports/transport.port";
 
 /**
  * Adapter for SSE server transport to accept incoming MCP client connections.
@@ -17,9 +20,9 @@ export class SseServerTransportAdapter implements SdkTransportPort {
    * @param messagePath The path where POST messages should be sent
    * @param response The HTTP response object to stream events to
    */
-  constructor(messagePath: string, response: HttpResponsePort) {
+  constructor(messagePath: string, response: ServerResponse) {
     // Cast to any since SSEServerTransport expects Express Response
-    this.transport = new SSEServerTransport(messagePath, response as any);
+    this.transport = new SSEServerTransport(messagePath, response);
   }
 
   get sessionId(): string {
@@ -55,11 +58,11 @@ export class SseServerTransportAdapter implements SdkTransportPort {
    * This method delegates to the underlying SDK transport
    */
   async handlePostMessage(
-    req: unknown,
-    res: unknown,
-    body: unknown
+    req: IncomingMessage & {
+      auth?: AuthInfo;
+    }, res: ServerResponse, body: unknown
   ): Promise<void> {
-    await this.transport.handlePostMessage(req as any, res as any, body);
+    await this.transport.handlePostMessage(req, res, body);
   }
 
   /**

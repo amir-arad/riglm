@@ -2,11 +2,12 @@
  * HTTP routes - HTTP adapter layer
  */
 import { Request, Response, Router } from "express";
+
 import { ApiError } from "../../domain/error";
+import { HostsService } from "../../application/hosts.service";
 import type { LoggerPort } from "../../ports/logger.port";
 import { Services } from "../../etc/service";
 import { SseServerTransportAdapter } from "../mcp/transports/sse-server.adapter";
-import { HostsService } from "../../application/hosts.service";
 
 export function makeHostsRoutes(hostsServices: Services<HostsService>, logger: LoggerPort) {
   const hostsRoutes = Router();

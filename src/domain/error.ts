@@ -15,7 +15,7 @@ export class ApiError extends Error {
   /**
    * Additional error data
    */
-  data?: any;
+  data?: unknown;
 
   /**
    * Create a new API error
@@ -24,7 +24,7 @@ export class ApiError extends Error {
    * @param code Error code
    * @param data Additional error data
    */
-  constructor(message: string, statusCode: number, code?: string, data?: any) {
+  constructor(message: string, statusCode: number, code?: string, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
@@ -42,7 +42,7 @@ export class ApiError extends Error {
    * @param data Additional error data
    * @returns API error
    */
-  static badRequest(message: string, code?: string, data?: any): ApiError {
+  static badRequest(message: string, code?: string, data?: unknown): ApiError {
     return new ApiError(message, 400, code, data);
   }
 
@@ -53,7 +53,7 @@ export class ApiError extends Error {
    * @param data Additional error data
    * @returns API error
    */
-  static unauthorized(message: string = 'Unauthorized', code?: string, data?: any): ApiError {
+  static unauthorized(message: string = 'Unauthorized', code?: string, data?: unknown): ApiError {
     return new ApiError(message, 401, code, data);
   }
 
@@ -64,7 +64,7 @@ export class ApiError extends Error {
    * @param data Additional error data
    * @returns API error
    */
-  static forbidden(message: string = 'Forbidden', code?: string, data?: any): ApiError {
+  static forbidden(message: string = 'Forbidden', code?: string, data?: unknown): ApiError {
     return new ApiError(message, 403, code, data);
   }
 
@@ -75,7 +75,7 @@ export class ApiError extends Error {
    * @param data Additional error data
    * @returns API error
    */
-  static notFound(message: string = 'Not Found', code?: string, data?: any): ApiError {
+  static notFound(message: string = 'Not Found', code?: string, data?: unknown): ApiError {
     return new ApiError(message, 404, code, data);
   }
 
@@ -86,7 +86,7 @@ export class ApiError extends Error {
    * @param data Additional error data
    * @returns API error
    */
-  static conflict(message: string, code?: string, data?: any): ApiError {
+  static conflict(message: string, code?: string, data?: unknown): ApiError {
     return new ApiError(message, 409, code, data);
   }
 
@@ -97,7 +97,7 @@ export class ApiError extends Error {
    * @param data Additional error data
    * @returns API error
    */
-  static validation(message: string, code?: string, data?: any): ApiError {
+  static validation(message: string, code?: string, data?: unknown): ApiError {
     return new ApiError(message, 422, code, data);
   }
 
@@ -108,7 +108,7 @@ export class ApiError extends Error {
    * @param data Additional error data
    * @returns API error
    */
-  static internal(message: string = 'Internal Server Error', code?: string, data?: any): ApiError {
+  static internal(message: string = 'Internal Server Error', code?: string, data?: unknown): ApiError {
     return new ApiError(message, 500, code, data);
   }
 }

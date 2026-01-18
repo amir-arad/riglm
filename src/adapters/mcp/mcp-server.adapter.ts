@@ -2,24 +2,27 @@
  * MCP Server Adapter - Wraps MCP SDK Server
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import {
-  ListToolsRequestSchema,
+  CallToolHandlerRequest,
+  ListToolsResponse,
+  McpServerConfig,
+  McpServerFactory,
+  McpServerPort,
+  RequestContext,
+} from "../../ports/mcp-server.port";
+import {
   CallToolRequestSchema,
+  CallToolResultSchema,
   ErrorCode,
+  ListToolsRequestSchema,
   McpError,
 } from "@modelcontextprotocol/sdk/types.js";
-import {
-  McpServerPort,
-  McpServerFactory,
-  McpServerConfig,
-  RequestContext,
-  ListToolsResponse,
-  CallToolHandlerRequest,
-} from "../../ports/mcp-server.port";
 import { SdkTransportPort, TransportPort } from "../../ports/transport.port";
+
+import { Infer } from "zod/v4";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ToolResponse } from "../../domain/types";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
 /**
  * Adapter for MCP Server.
@@ -82,9 +85,8 @@ export class McpServerAdapter implements McpServerPort {
             arguments: request.params.arguments,
           },
           { signal, sessionId }
-        );
-        // Return SDK-compatible format - cast to any to satisfy SDK types
-        return result as any;
+        ) as Infer<typeof CallToolResultSchema>;
+        return result;
       }
     );
   }

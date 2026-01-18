@@ -4,17 +4,15 @@
 
 import {
   ClientTransportFactory,
-  ServerTransportFactory,
-  TransportPort,
-  StdioTransportConfig,
-  SseTransportConfig,
   HttpTransportConfig,
-  HttpResponsePort,
+  SseTransportConfig,
+  StdioTransportConfig,
+  TransportPort
 } from "../../../ports/transport.port";
-import { StdioClientTransportAdapter } from "./stdio-client.adapter";
-import { SseClientTransportAdapter } from "./sse-client.adapter";
+
 import { HttpClientTransportAdapter } from "./http-client.adapter";
-import { SseServerTransportAdapter } from "./sse-server.adapter";
+import { SseClientTransportAdapter } from "./sse-client.adapter";
+import { StdioClientTransportAdapter } from "./stdio-client.adapter";
 
 /**
  * Factory implementation for creating client transports
@@ -33,20 +31,9 @@ export class ClientTransportFactoryAdapter implements ClientTransportFactory {
   }
 }
 
-/**
- * Factory implementation for creating server transports
- */
-export class ServerTransportFactoryAdapter implements ServerTransportFactory {
-  createSseServerTransport(
-    messagePath: string,
-    response: HttpResponsePort
-  ): TransportPort {
-    return new SseServerTransportAdapter(messagePath, response);
-  }
-}
-
 // Export individual adapters for direct use
-export { StdioClientTransportAdapter } from "./stdio-client.adapter";
-export { SseClientTransportAdapter } from "./sse-client.adapter";
 export { HttpClientTransportAdapter } from "./http-client.adapter";
+export { SseClientTransportAdapter } from "./sse-client.adapter";
 export { SseServerTransportAdapter } from "./sse-server.adapter";
+export { StdioClientTransportAdapter } from "./stdio-client.adapter";
+
