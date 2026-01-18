@@ -9,7 +9,7 @@ A unified platform that aggregates multiple MCP (Model Context Protocol) servers
 - **Flexible Configuration** - JSON5 config with support for local (stdio) and remote (SSE/HTTP) servers
 - **Tool Filtering** - Filter out unwanted tools at global, endpoint, or server level
 - **Multiple Endpoints** - Create different endpoints for different use cases (development, production, etc.)
-- **Web UI** - React-based dashboard for monitoring and management
+- **Web UI** - Dashboard for monitoring and management
 
 ## Installation
 
@@ -18,7 +18,6 @@ A unified platform that aggregates multiple MCP (Model Context Protocol) servers
 Build a single executable with embedded web client (no Bun or Node.js runtime required):
 
 ```bash
-cd server
 bun install
 bun run build:standalone
 ```
@@ -126,23 +125,28 @@ git clone <repository-url>
 cd riglm
 ```
 
-### 2. Server Setup
+### 2. Install Dependencies
 
 ```bash
-cd server
 bun install
 ```
 
-#### Create Configuration File
+### 3. Create Configuration File
 
-Copy the example configuration and customize it:
+Use the CLI to create a configuration file:
+
+```bash
+bun run dev init  # Creates ~/.config/riglm/config.json5
+```
+
+Or manually copy the example configuration:
 
 ```bash
 mkdir -p data
 cp config.simplified.example.json5 data/config.local.json5
 ```
 
-Edit `data/config.local.json5` to define your MCP servers:
+Edit your configuration file to define your MCP servers:
 
 ```json5
 {
@@ -183,7 +187,7 @@ Edit `data/config.local.json5` to define your MCP servers:
 }
 ```
 
-#### Start the Server
+### 4. Start the Server
 
 ```bash
 # Development mode (with hot reload)
@@ -194,19 +198,7 @@ bun run build
 bun run start
 ```
 
-The server will start on port 3000 by default.
-
-### 3. Client Setup (Optional)
-
-The web UI provides a dashboard for monitoring your endpoints and servers.
-
-```bash
-cd client
-bun install
-bun run dev
-```
-
-The client will start on http://localhost:8080.
+The server will start on port 3000 by default. Web UI is served at http://localhost:3000.
 
 ## Configuration Reference
 
@@ -319,33 +311,20 @@ Replace `<endpoint-id>` with the endpoint name from your configuration (e.g., `m
 
 | Variable        | Default                       | Description                              |
 | --------------- | ----------------------------- | ---------------------------------------- |
-| `CONFIG_PATH` | `./data/config.local.json5` | Path to configuration file               |
+| `CONFIG_PATH` | Auto-detected | Override config path (default: `~/.config/riglm/` or `./.riglm/`) |
 | `PORT`        | `3000`                      | Server port                              |
 | `LOG_LEVEL`   | `info`                      | Logging level (error, warn, info, debug) |
 | `NODE_ENV`    | `development`               | Environment mode                         |
 
 ## Development Commands
 
-### Server
-
 ```bash
-cd server
 bun run dev          # Development with hot reload
 bun run build        # Production build
 bun run start        # Run production build
 bun test             # Run tests (Bun test runner)
 bun run lint         # Run ESLint
 bun run typecheck    # Type checking
-```
-
-### Client
-
-```bash
-cd client
-bun run dev          # Vite dev server (port 8080)
-bun run build        # Production build
-bun run preview      # Preview production build
-bun run lint         # Run ESLint
 ```
 
 ## Development Workflow
@@ -372,7 +351,7 @@ Version management uses npm's built-in versioning which automatically:
 - Creates a git tag (e.g., `v1.2.3`)
 - Pushes the commit and tag to origin
 
-**Release commands** (run from `server/` directory):
+**Release commands:**
 
 ```bash
 # Patch release (1.0.0 → 1.0.1) - bug fixes
@@ -418,8 +397,7 @@ When a version tag is pushed (e.g., `v1.2.3`), GitHub Actions automatically:
 git checkout main
 git pull origin main
 
-# 2. Run release (from server/ directory)
-cd server
+# 2. Run release
 bun run release:minor  # or release:patch, release:major
 
 # This automatically:
@@ -461,26 +439,23 @@ Expand-Archive riglm.zip -DestinationPath .
 
 ```
 riglm/
-├── server/                 # Express backend (hexagonal architecture)
-│   ├── src/
-│   │   ├── index.ts        # Entry point (wires adapters)
-│   │   ├── server.ts       # RiglmServer (Express app)
-│   │   ├── ports/          # Abstract interfaces (contracts)
-│   │   ├── domain/         # Pure business logic (filter, types, config)
-│   │   ├── adapters/       # Concrete implementations
-│   │   │   ├── http/       # Express routes & middleware
-│   │   │   ├── logging/    # Winston adapter
-│   │   │   ├── storage/    # File config adapter
-│   │   │   └── mcp/        # MCP client/server adapters
-│   │   ├── application/    # Services (hosts, backend)
-│   │   ├── host-gateway/   # Transport session manager
-│   │   └── etc/            # Utilities
-│   └── test/               # Test files
-├── client/                 # React frontend (placeholder, Phase 4)
-│   ├── src/
-│   │   ├── pages/          # Dashboard, Servers, Endpoints, etc.
-│   │   └── components/     # UI components (shadcn/ui)
-│   └── index.html
+├── src/                    # Express backend (hexagonal architecture)
+│   ├── index.ts            # Entry point (wires adapters)
+│   ├── server.ts           # RiglmServer (Express app)
+│   ├── ports/              # Abstract interfaces (contracts)
+│   ├── domain/             # Pure business logic (filter, types, config)
+│   ├── adapters/           # Concrete implementations
+│   │   ├── http/           # Express routes & middleware
+│   │   ├── logging/        # Winston adapter
+│   │   ├── storage/        # File config adapter
+│   │   └── mcp/            # MCP client/server adapters
+│   ├── application/        # Services (hosts, backend)
+│   ├── host-gateway/       # Transport session manager
+│   └── etc/                # Utilities
+├── test/                   # Unit and E2E tests
+├── e2e-ui/                 # Playwright UI tests
+├── public/                 # Static web UI (vanilla HTML/CSS/JS)
+├── data/                   # Runtime data (config, extensions, logs)
 ├── docs/                   # Documentation and plans
 └── README.md
 ```

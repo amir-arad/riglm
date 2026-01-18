@@ -25,12 +25,12 @@ export type EmbeddedAssetsMap = Map<string, EmbeddedAsset>;
  * Detect if we're running as a standalone executable.
  *
  * In standalone mode, __dirname points to a temporary extraction location
- * and the original client/public directory won't exist relative to it.
+ * and the original public directory won't exist relative to it.
  */
 export function isStandaloneMode(): boolean {
-  // Check if the client directory exists relative to expected location
-  const expectedClientPath = join(dirname(__dirname), "..", "client", "public");
-  return !existsSync(expectedClientPath);
+  // Check if the public directory exists relative to expected location
+  const expectedPublicPath = join(dirname(__dirname), "public");
+  return !existsSync(expectedPublicPath);
 }
 
 /**
@@ -45,8 +45,8 @@ export async function loadEmbeddedAssets(): Promise<EmbeddedAssetsMap> {
   try {
     // Bun embeds files referenced with static string literal paths
     // These paths are relative to THIS file's location (src/)
-    const indexHtmlPath = join(__dirname, "../../client/public/index.html");
-    const faviconPath = join(__dirname, "../../client/public/favicon.svg");
+    const indexHtmlPath = join(__dirname, "../public/index.html");
+    const faviconPath = join(__dirname, "../public/favicon.svg");
 
     const indexHtml = await Bun.file(indexHtmlPath).text();
     const favicon = await Bun.file(faviconPath).text();

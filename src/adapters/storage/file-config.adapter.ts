@@ -92,7 +92,7 @@ export class FileConfigAdapter implements ConfiguratorPort {
   }
 
   /**
-   * Get filters for a specific server/endpoint with priority resolution
+   * Get filters for a specific server and/or endpoint with priority resolution
    * Priority: server filters > endpoint filters > global filters
    */
   getFilters(serverId?: string, endpointId?: string): Filters {

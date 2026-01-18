@@ -82,7 +82,7 @@ interface Extension {
 
 ### Decision 3: File-Based Storage
 
-**Choice**: Store extensions in `server/data/extensions.json`
+**Choice**: Store extensions in `data/extensions.json`
 
 **Why**:
 - Aligns with single-user, local-only model
@@ -133,7 +133,7 @@ Future:   extensions.json    (extension definitions)
 |---|----------|--------|
 | 1 | Extension type system | Discriminated union with `type` field |
 | 2 | Layered terminology | Server = MCP level, Extension = management level |
-| 3 | File-based storage | JSON files in `server/data/` |
+| 3 | File-based storage | JSON files in `data/` |
 | 4 | Knowledge artifacts | Deferred; separate type when ready |
 | 5 | Config strategy | Phase out monolithic config → purpose-specific files |
 | 6 | Endpoint config | Separate `endpoints.json` file |

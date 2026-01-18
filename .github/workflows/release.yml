@@ -43,10 +43,6 @@ jobs:
             artifact: riglm-windows-x64
             ext: '.exe'
 
-    defaults:
-      run:
-        working-directory: ./server
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -81,14 +77,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: server/dist/${{ matrix.artifact }}.tar.gz
+          path: dist/${{ matrix.artifact }}.tar.gz
 
       - name: Upload artifact (Windows)
         if: matrix.ext == '.exe'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: server/dist/${{ matrix.artifact }}.zip
+          path: dist/${{ matrix.artifact }}.zip
 
   release:
     name: Create Release

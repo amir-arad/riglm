@@ -1,7 +1,7 @@
 {
   "json.schemas": [
     {
-      "fileMatch": ["./server/config-schema.json"]
+      "fileMatch": ["./config-schema.json"]
     }
   ]
 }

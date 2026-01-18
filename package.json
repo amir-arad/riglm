@@ -19,7 +19,7 @@
     "deadcode": "knip",
     "circular": "madge --circular --extensions ts src/",
     "preversion": "bun run lint && bun run typecheck && bun test",
-    "version": "cd .. && git add -A",
+    "version": "git add -A",
     "postversion": "git push && git push --tags",
     "release:patch": "npm version patch",
     "release:minor": "npm version minor",

@@ -1,10 +1,10 @@
-# Tool Filtering in Ghostweels
+# ool Filtering in RigLM
 
-This guide explains how to use Ghostweels' tool filtering capabilities to control which tools are available across your servers.
+This guide explains how to use RigLM' tool filtering capabilities to control which tools are available across your servers.
 
 ## Ignore Filter
 
-The filter system in Ghostweels allows you to completely remove tools from being available to your server. Use filtering when:
+The filter system in RigLM allows you to completely remove tools from being available to your server. Use filtering when:
 
 - You want to disable specific tools entirely
 - You need to restrict access to certain tools for security or compliance reasons
@@ -18,7 +18,7 @@ The filter system in Ghostweels allows you to completely remove tools from being
 
 ## Hierarchical Filter Configuration
 
-Ghostweels supports a hierarchical approach to filter configuration. You can define filters at two levels:
+RigLM supports a hierarchical approach to filter configuration. You can define filters at two levels:
 
 1. **Global level**: Applies to all servers by default
 2. **Server-specific level**: Defined per server, overriding global filters completely
@@ -78,6 +78,7 @@ This example shows how a server can completely override global filters with its 
 ```
 
 In this configuration:
+
 - `production_server` has its own set of filters that completely replace the global filters
 - `development_server` inherits all global filters since it doesn't define its own
 
@@ -102,19 +103,20 @@ In this configuration, `production_server` will inherit all global filters. Sett
 
 ## Filter Pattern Syntax
 
-Ghostweels uses a glob-style pattern matching for tool filters:
+RigLM uses a glob-style pattern matching for tool filters:
 
 - `*` matches any sequence of characters
 - `?` matches any single character
 
 For example:
+
 - `debug_*` matches any tool ID starting with "debug_"
 - `*_internal` matches any tool ID ending with "_internal"
 - `old_tool_v?` matches "old_tool_v1", "old_tool_v2", etc.
 
 ## Implementation Details
 
-When you configure filters, Ghostweels:
+When you configure filters, RigLM:
 
 1. Resolves the applicable filters for each server (server-specific or global)
 2. Creates a `FilterEngine` instance for each unique filter configuration

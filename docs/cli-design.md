@@ -362,7 +362,7 @@ The server should conditionally mount routes:
 ```typescript
 // In server.ts
 if (config.enableUi) {
-  this.app.use('/ui', express.static('client/public'));
+  this.app.use(express.static('public'));
 }
 
 if (config.enableApi) {
