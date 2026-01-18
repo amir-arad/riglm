@@ -91,7 +91,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     options.path
   );
 
-  console.log(`Initializing ABC configuration...`);
+  console.log(`Initializing Riglm configuration...`);
   console.log(`  Template:  ${templateName}`);
   console.log(`  Location:  ${location.directory}`);
   console.log("");
@@ -142,8 +142,8 @@ export async function initCommand(options: InitOptions): Promise<void> {
     console.log("");
     console.log("Next steps:");
     console.log("  1. Edit the configuration file to add your MCP servers");
-    console.log("  2. Run 'abc validate' to verify the configuration");
-    console.log("  3. Run 'abc' to start the server");
+    console.log("  2. Run 'riglm validate' to verify the configuration");
+    console.log("  3. Run 'riglm' to start the server");
   } else {
     console.log("No files were created. Use --force to overwrite existing files.");
   }

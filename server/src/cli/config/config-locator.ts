@@ -30,8 +30,8 @@ export interface ConfigLocation {
 
 const CONFIG_FILENAME = "config.json5";
 const EXTENSIONS_FILENAME = "extensions.json";
-const LOCAL_DIR_NAME = ".abc";
-const APP_NAME = "abc";
+const LOCAL_DIR_NAME = ".riglm";
+const APP_NAME = "riglm";
 
 // ============================================================================
 // Platform-specific Paths
@@ -82,7 +82,7 @@ function getPlatformConfigDirs(): string[] {
 function getSearchLocations(): Array<{ dir: string; isLocal: boolean }> {
   const locations: Array<{ dir: string; isLocal: boolean }> = [];
 
-  // 1. Local override (project-level): ./.abc/
+  // 1. Local override (project-level): ./.riglm/
   locations.push({
     dir: join(process.cwd(), LOCAL_DIR_NAME),
     isLocal: true,
@@ -100,10 +100,10 @@ function getSearchLocations(): Array<{ dir: string; isLocal: boolean }> {
  * Find the first existing config file in standard locations
  *
  * Search order:
- * 1. ./.abc/config.json5 (local override)
- * 2. ~/.config/abc/config.json5 (XDG default on Linux/macOS)
- * 3. ~/Library/Application Support/abc/config.json5 (macOS alternative)
- * 4. %APPDATA%\abc\config.json5 (Windows)
+ * 1. ./.riglm/config.json5 (local override)
+ * 2. ~/.config/riglm/config.json5 (XDG default on Linux/macOS)
+ * 3. ~/Library/Application Support/riglm/config.json5 (macOS alternative)
+ * 4. %APPDATA%\riglm\config.json5 (Windows)
  */
 export function findConfig(): ConfigLocation | null {
   for (const { dir, isLocal } of getSearchLocations()) {

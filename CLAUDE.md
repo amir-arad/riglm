@@ -2,19 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Product: Personal AI Extension Manager
+## Product: AI Extension Manager
 
 A unified platform where users define their LLM extensions (MCP servers, knowledge artifacts) in ONE PLACE, then dynamically attach/detach each extension to/from sessions across multiple MCP-compatible LLM tools (Claude Code, Cursor, Cline, etc.).
 
 ## Current Status
 
 **Phase 1 (Foundation)** - In Progress
-- [x] Workspace cleanup - removed unrelated projects
-- [x] Config consolidation - simplified 2-tier format (servers → endpoints)
-- [x] Dead code removal - removed unused RPC endpoint
-- [x] Migrated to Bun runtime (faster startup, native TypeScript, built-in test runner)
-- [x] Architecture refactor - hexagonal/ports-adapters pattern
-- [x] Extension registry - file-based CRUD for extensions (Zod validation)
+
+- [X] Workspace cleanup - removed unrelated projects
+- [X] Config consolidation - simplified 2-tier format (servers → endpoints)
+- [X] Dead code removal - removed unused RPC endpoint
+- [X] Migrated to Bun runtime (faster startup, native TypeScript, built-in test runner)
+- [X] Architecture refactor - hexagonal/ports-adapters pattern
+- [X] Extension registry - file-based CRUD for extensions (Zod validation)
 
 **Upcoming:** Phase 2 (Dynamic State), Phase 3 (WebSocket), Phase 4 (Client Redesign)
 
@@ -23,7 +24,7 @@ See `docs/implementation-plan.md` for full roadmap.
 ## Project Structure
 
 ```
-abc/
+riglm/
 ├── .claude/         # Claude Code configuration
 │   └── skills/      # Project-specific skills (mcp-testing)
 ├── server/          # Express backend - MCP aggregator
@@ -67,10 +68,10 @@ Build a single executable with embedded web client (no Bun/Node.js required):
 
 ```bash
 cd server
-bun run build:standalone    # Creates dist/abc-server (~102MB)
+bun run build:standalone    # Creates dist/riglm (~102MB)
 
 # Run anywhere
-CONFIG_PATH=/path/to/config.json5 ./dist/abc-server
+CONFIG_PATH=/path/to/config.json5 ./dist/riglm
 ```
 
 ## Server Commands
@@ -101,6 +102,7 @@ bun test test/filter.test.ts   # Run specific test file
 ```
 
 Test structure:
+
 - `test/filter.test.ts` - Unit tests for filter engine
 - `test/extension.test.ts` - Extension domain types and Zod validation
 - `test/extension-registry.test.ts` - ExtensionRegistry CRUD operations

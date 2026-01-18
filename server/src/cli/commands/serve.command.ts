@@ -1,7 +1,7 @@
 /**
  * Serve Command
  *
- * Starts the ABC server with the resolved configuration.
+ * Starts the Riglm server with the resolved configuration.
  * @see docs/cli-design.md for specification
  */
 
@@ -24,7 +24,7 @@ import { McpServerFactoryAdapter } from "../../adapters/mcp/mcp-server.adapter";
 import { ClientTransportFactoryAdapter } from "../../adapters/mcp/transports";
 
 // Server
-import { AbcServer } from "../../server";
+import { RiglmServer } from "../../server";
 
 // ============================================================================
 // Config Loading
@@ -101,12 +101,12 @@ async function startServer(config: ResolvedConfig, _appConfig: Config): Promise<
   const transportFactory = new ClientTransportFactoryAdapter();
 
   // Create and start server
-  const server = new AbcServer({
+  const server = new RiglmServer({
     config: configAdapter,
     clientFactory,
     serverFactory,
     transportFactory,
-    logger: logger.child({ service: "abc" }),
+    logger: logger.child({ service: "riglm" }),
     env: {
       port: config.port,
       host: config.host,
@@ -152,11 +152,11 @@ export async function serveCommand(options: ServeOptions): Promise<ServerRuntime
       console.error("No configuration file found.");
       console.error("");
       console.error("Searched locations:");
-      console.error("  1. ./.abc/config.json5");
-      console.error("  2. ~/.config/abc/config.json5");
+      console.error("  1. ./.riglm/config.json5");
+      console.error("  2. ~/.config/riglm/config.json5");
       console.error("");
-      console.error("Create one with: abc init");
-      console.error("Or specify with: abc serve -c <path>");
+      console.error("Create one with: riglm init");
+      console.error("Or specify with: riglm serve -c <path>");
     }
     exit(ExitCode.CONFIG_NOT_FOUND);
   }

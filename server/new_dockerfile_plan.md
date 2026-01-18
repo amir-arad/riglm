@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the plan for creating a new Dockerfile for the ABC server project. The Dockerfile will be designed to:
+This document outlines the plan for creating a new Dockerfile for the Riglm project. The Dockerfile will be designed to:
 
 1. Build and run the server only (no client-side build)
 2. Run on port 56667

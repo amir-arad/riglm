@@ -44,7 +44,7 @@ We use the low-level `Server` class for more control:
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 
 const server = new Server(
-  { name: "ghostwheels", version: "1.0.0" },
+  { name: "riglm", version: "1.0.0" },
   { capabilities: { tools: { listChanged: true } } }
 );
 
@@ -76,7 +76,7 @@ This is critical for Phase 2 (dynamic extension toggle).
 ```typescript
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 
-const client = new Client({ name: "abc-bridge", version: "0.0.1" });
+const client = new Client({ name: "riglm-bridge", version: "0.0.1" });
 await client.connect(transport);
 
 // List tools from server

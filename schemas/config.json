@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://abc.arad.link/mvp-config.schema.json",
-  "title": "ABC Application Configuration",
-  "description": "Unified configuration for MCP Servers, Contexts, and Endpoints for ABC.",
+  "$id": "https://riglm.arad.link/config.schema.json",
+  "title": "Riglm Configuration",
+  "description": "Unified configuration for MCP Servers, Contexts, and Endpoints for Riglm.",
   "type": "object",
   "properties": {
     "servers": {

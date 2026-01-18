@@ -231,8 +231,8 @@ export async function validateCommand(options: ValidateOptions): Promise<void> {
       console.error("No configuration file found.");
       console.error("");
       console.error("Searched locations:");
-      console.error("  1. ./.abc/config.json5");
-      console.error("  2. ~/.config/abc/config.json5");
+      console.error("  1. ./.riglm/config.json5");
+      console.error("  2. ~/.config/riglm/config.json5");
       console.error("");
       console.error("Use -c <path> to specify a configuration file.");
     }

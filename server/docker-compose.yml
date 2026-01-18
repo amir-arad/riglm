@@ -1,5 +1,5 @@
 services:
-  ghostwheels:
+  riglm:
     build:
       context: .
       dockerfile: Dockerfile

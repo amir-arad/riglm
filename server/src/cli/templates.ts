@@ -10,8 +10,8 @@
 // ============================================================================
 
 export const MINIMAL_CONFIG = `{
-  // ABC Server Configuration
-  // See: https://github.com/your-org/abc
+  // Riglm Configuration
+  // See: https://github.com/your-org/riglm
 
   // MCP servers to connect to
   "servers": {
@@ -43,8 +43,8 @@ export const MINIMAL_EXTENSIONS = `{
 // ============================================================================
 
 export const STANDARD_CONFIG = `{
-  // ABC Server Configuration
-  // See: https://github.com/your-org/abc
+  // Riglm Configuration
+  // See: https://github.com/your-org/riglm
 
   // MCP servers to connect to
   "servers": {
@@ -85,11 +85,11 @@ export const STANDARD_EXTENSIONS = `{
 
 export const FULL_CONFIG = `{
   // ==========================================================================
-  // ABC Server Configuration
+  // Riglm Configuration
   // ==========================================================================
   //
   // This is a JSON5 file - comments and trailing commas are allowed.
-  // See: https://github.com/your-org/abc
+  // See: https://github.com/your-org/riglm
   //
   // Priority for settings: CLI flags > Environment variables > This file
 
@@ -210,7 +210,7 @@ export const FULL_EXTENSIONS = `{
   // ==========================================================================
   //
   // Stores custom extensions that can be dynamically enabled/disabled.
-  // This file is managed by the ABC Server - manual editing is possible
+  // This file is managed by Riglm - manual editing is possible
   // but changes will be overwritten when using the management API.
 
   "extensions": [

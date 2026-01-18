@@ -5,8 +5,8 @@
  * @see docs/cli-design.md for specification
  */
 
-import type { ResolvedConfig } from "../config/resolved-config";
 import type { Config } from "../../domain/types";
+import type { ResolvedConfig } from "../config/resolved-config";
 
 // ============================================================================
 // Types
@@ -65,8 +65,8 @@ export function printBanner(info: BannerInfo): void {
 
   // Header box
   const headerLines = [
-    `ABC Server v${version}`,
-    "Personal AI Extension Manager",
+    `Riglm v${version}`,
+    "AI Extension Manager",
   ];
   const box = createBox(headerLines, 50);
   console.log(box.join("\n"));
@@ -122,7 +122,7 @@ export function printBanner(info: BannerInfo): void {
  */
 export function printQuietBanner(config: ResolvedConfig): void {
   const baseUrl = config.host === "0.0.0.0" ? "localhost" : config.host;
-  console.log(`ABC Server listening on http://${baseUrl}:${config.port}`);
+  console.log(`Riglm listening on http://${baseUrl}:${config.port}`);
 }
 
 /**
@@ -131,7 +131,7 @@ export function printQuietBanner(config: ResolvedConfig): void {
 export function printDryRun(info: BannerInfo): void {
   const { version, config, appConfig } = info;
 
-  console.log(`ABC Server v${version} - Dry Run`);
+  console.log(`Riglm v${version} - Dry Run`);
   console.log("═".repeat(50));
   console.log();
 

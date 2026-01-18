@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Ghostwheels** is a TypeScript middleware server that aggregates multiple MCP (Model Context Protocol) servers into a single endpoint. It's the backend for the Personal AI Extension Manager.
+**Riglm** is a TypeScript middleware server that aggregates multiple MCP (Model Context Protocol) servers into a single endpoint. It's the backend for the AI Extension Manager.
 
 ## Runtime
 
@@ -29,7 +29,7 @@ The server uses a **hexagonal architecture** (ports/adapters pattern) for clean 
 
 ### Core Components
 
-1. **AbcServer** (`src/server.ts`) - Express server with Helmet security and Morgan logging
+1. **RiglmServer** (`src/server.ts`) - Express server with Helmet security and Morgan logging
 
 2. **Ports** (`src/ports/`) - Abstract interfaces:
    - `logger.port.ts` - Logging contract
@@ -124,7 +124,7 @@ LOG_LEVEL=info                         # Winston log level (debug, info, warn, e
 ## Key Files
 
 - `src/index.ts` - Entry point (wires adapters to ports)
-- `src/server.ts` - AbcServer (Express app)
+- `src/server.ts` - RiglmServer (Express app)
 - `src/embedded-assets.ts` - Embedded static asset serving for standalone builds
 - `src/domain/types.ts` - Configuration and tool types
 - `src/domain/filter-engine.ts` - Tool filtering engine

@@ -1,5 +1,5 @@
 /**
- * AbcServer - Express server with MCP aggregation
+ * RiglmServer - Express server with MCP aggregation
  */
 
 import express from "express";
@@ -77,7 +77,7 @@ export interface ServerOptions {
 // Server Class
 // ============================================================================
 
-export class AbcServer {
+export class RiglmServer {
   private httpServer: Server | null = null;
   port: number | null = null;
   private hostsServices: Services<HostsService> | null = null;

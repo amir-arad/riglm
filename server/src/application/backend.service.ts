@@ -105,7 +105,7 @@ function createBackendConnector(
     );
 
     // Create and connect client
-    const client = clientFactory.create(`abc-bridge-${sessionId}`, "0.0.1");
+    const client = clientFactory.create(`riglm-bridge-${sessionId}`, "0.0.1");
 
     try {
       logger.info(

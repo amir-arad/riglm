@@ -2,7 +2,7 @@
 
 ## Overview
 
-Transform the MCP aggregator (Ghostwheels) into a full-featured Personal AI Extension Manager with dynamic extension control via Web UI.
+Transform the MCP aggregator (Riglm) into a full-featured Personal AI Extension Manager with dynamic extension control via Web UI.
 
 ## Phase Summary
 
@@ -256,7 +256,7 @@ useWebSocket()     // Real-time updates
 server/
 ├── src/
 │   ├── index.ts                  # Entry point (wires adapters)
-│   ├── server.ts                 # AbcServer (Express app)
+│   ├── server.ts                 # RiglmServer (Express app)
 │   │
 │   ├── ports/                    # Interface contracts ✅
 │   │   ├── logger.port.ts

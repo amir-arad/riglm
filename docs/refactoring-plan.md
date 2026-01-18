@@ -27,11 +27,11 @@ export class ConfigManager implements ServerConfigurator {
 }
 ```
 
-### 2. AbcServer Class ✅
+### 2. RiglmServer Class ✅
 
 Created `src/server.ts`:
 ```typescript
-export class AbcServer {
+export class RiglmServer {
   private httpServer: Server | null = null;
   private hostsServices: Services<HostsService> | null = null;
 
@@ -90,7 +90,7 @@ These items were identified but deferred to later phases:
 
 ```
 index.ts
-  └── AbcServer
+  └── RiglmServer
         ├── FileConfigAdapter (implements ConfigStoragePort)
         ├── WinstonAdapter (implements LoggerPort)
         └── Application Services

@@ -65,7 +65,7 @@ test.describe("Settings", () => {
   test.describe("About Section", () => {
     test("displays about card", async ({ page }) => {
       await expect(page.locator(".card-title").nth(2)).toHaveText("About");
-      await expect(page.locator(".card").nth(2)).toContainText("ABC Extension Manager");
+      await expect(page.locator(".card").nth(2)).toContainText("Riglm");
     });
 
     test("shows uptime when navigating directly to settings", async ({ page }) => {

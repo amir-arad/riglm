@@ -9,7 +9,7 @@
  * - POST /api/config/reload
  */
 
-import { AbcServer, ServerDeps } from "../../src/server";
+import { RiglmServer, ServerDeps } from "../../src/server";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
 import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
@@ -18,7 +18,7 @@ import { createMockConfigStorage } from "../mocks/mock-config";
 import { createSilentLogger } from "../mocks/mock-logger";
 
 describe("Management API E2E", () => {
-  let server: AbcServer | null = null;
+  let server: RiglmServer | null = null;
   let mockConfig: ReturnType<typeof createMockConfigStorage> | null = null;
   let baseUrl: string;
   const port = 56680;
@@ -61,7 +61,7 @@ describe("Management API E2E", () => {
       filters: ["*_internal"],
     });
 
-    server = new AbcServer(createServerDeps());
+    server = new RiglmServer(createServerDeps());
     await server.start();
     baseUrl = `http://localhost:${port}`;
   });

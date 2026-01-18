@@ -95,7 +95,7 @@ export async function versionCommand(options: VersionOptions): Promise<void> {
     console.log(
       JSON.stringify(
         {
-          abc: info.version,
+          riglm: info.version,
           runtime: info.runtime,
           runtimeVersion: info.runtimeVersion,
           mcpSdk: info.mcpSdk,
@@ -106,7 +106,7 @@ export async function versionCommand(options: VersionOptions): Promise<void> {
     );
   } else {
     // Human-readable output
-    console.log(`abc v${info.version}`);
+    console.log(`riglm v${info.version}`);
     console.log(`Runtime: ${info.runtime} ${info.runtimeVersion}`);
     console.log(`MCP SDK: @modelcontextprotocol/sdk ${info.mcpSdk}`);
   }

@@ -4,7 +4,7 @@ import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { setTimeout } from "node:timers/promises";
 import { join, dirname } from "path";
 import winston from "winston";
-import { AbcServer, ServerDeps } from "../../src/server";
+import { RiglmServer, ServerDeps } from "../../src/server";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
 import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
 import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
@@ -17,7 +17,7 @@ const fixturesDir = join(dirname(import.meta.path), "../fixtures");
 describe("E2E Test", () => {
   let mockBackend: ReturnType<typeof mocSseServer> | null = null;
   let client: Client | null = null;
-  let uut: AbcServer | null = null;
+  let uut: RiglmServer | null = null;
   let mockConfig: ReturnType<typeof createMockConfigStorage> | null = null;
 
   // Create winston logger with LoggerPort-compatible interface
@@ -25,7 +25,7 @@ describe("E2E Test", () => {
     level: "info",
     format: winston.format.combine(
       winston.format.colorize(),
-      winston.format.label({ label: "ghostwheels", message: true }),
+      winston.format.label({ label: "riglm", message: true }),
       winston.format.simple()
     ),
     transports: [
@@ -89,7 +89,7 @@ describe("E2E Test", () => {
       name: "test-client",
       version: "1.0.0",
     });
-    uut = new AbcServer(createServerDeps(mockConfig));
+    uut = new RiglmServer(createServerDeps(mockConfig));
   });
 
   afterEach(async function () {

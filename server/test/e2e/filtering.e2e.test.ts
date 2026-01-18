@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { Config } from "../../src/domain/types";
-import { AbcServer, ServerDeps } from "../../src/server";
+import { RiglmServer, ServerDeps } from "../../src/server";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
 import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
 import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
@@ -13,7 +13,7 @@ import winston from "winston";
 describe("Tool Filtering E2E Tests", () => {
   let mockBackend: ReturnType<typeof mocSseServer> | null = null;
   let client: Client | null = null;
-  let server: AbcServer | null = null;
+  let server: RiglmServer | null = null;
   let mockConfig: ReturnType<typeof createMockConfigStorage> | null = null;
 
   const winstonLogger = winston.createLogger({
@@ -69,7 +69,7 @@ describe("Tool Filtering E2E Tests", () => {
       name: "test-client",
       version: "1.0.0",
     });
-    server = new AbcServer(createServerDeps(mockConfig));
+    server = new RiglmServer(createServerDeps(mockConfig));
     await mockBackend.listen(3000);
     await server.start();
   });

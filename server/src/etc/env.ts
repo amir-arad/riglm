@@ -6,15 +6,15 @@
  * CLI flags > Environment variables > Defaults
  *
  * Environment variables supported:
- * - ABC_PORT, PORT (legacy) - Server port
- * - ABC_HOST - Bind address
- * - ABC_CONFIG, CONFIG_PATH (legacy) - Config file path
- * - ABC_LOG_LEVEL, LOG_LEVEL (legacy) - Log level
- * - ABC_LOG_FORMAT - Log format (pretty|json)
- * - ABC_LOG_FILE - Log file path
- * - ABC_DISABLE_UI - Disable web UI (1|true|yes|on)
- * - ABC_DISABLE_API - Disable management API (1|true|yes|on)
- * - ABC_WATCH - Enable config hot-reload (1|true|yes|on)
+ * - RIGLM_PORT, PORT (legacy) - Server port
+ * - RIGLM_HOST - Bind address
+ * - RIGLM_CONFIG, CONFIG_PATH (legacy) - Config file path
+ * - RIGLM_LOG_LEVEL, LOG_LEVEL (legacy) - Log level
+ * - RIGLM_LOG_FORMAT - Log format (pretty|json)
+ * - RIGLM_LOG_FILE - Log file path
+ * - RIGLM_DISABLE_UI - Disable web UI (1|true|yes|on)
+ * - RIGLM_DISABLE_API - Disable management API (1|true|yes|on)
+ * - RIGLM_WATCH - Enable config hot-reload (1|true|yes|on)
  */
 
 import path from "path";
@@ -28,30 +28,30 @@ function isTruthy(value: string | undefined): boolean {
 }
 
 /**
- * Get config path with ABC_* prefix support
+ * Get config path with RIGLM_* prefix support
  */
 function getConfigPath(): string {
   return (
-    process.env.ABC_CONFIG ||
+    process.env.RIGLM_CONFIG ||
     process.env.CONFIG_PATH ||
     path.join(process.cwd(), "data", "config.local.json5")
   );
 }
 
 /**
- * Get port with ABC_* prefix support
+ * Get port with RIGLM_* prefix support
  */
 function getPort(): number {
-  const portStr = process.env.ABC_PORT || process.env.PORT || "3000";
+  const portStr = process.env.RIGLM_PORT || process.env.PORT || "3000";
   const port = parseInt(portStr, 10);
   return isNaN(port) ? 3000 : port;
 }
 
 /**
- * Get log level with ABC_* prefix support
+ * Get log level with RIGLM_* prefix support
  */
 function getLogLevel(): string {
-  return process.env.ABC_LOG_LEVEL || process.env.LOG_LEVEL || "info";
+  return process.env.RIGLM_LOG_LEVEL || process.env.LOG_LEVEL || "info";
 }
 
 /**
@@ -62,15 +62,15 @@ function getLogLevel(): string {
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: getPort(),
-  host: process.env.ABC_HOST || "0.0.0.0",
+  host: process.env.RIGLM_HOST || "0.0.0.0",
   configPath: getConfigPath(),
   logLevel: getLogLevel(),
-  logFormat: (process.env.ABC_LOG_FORMAT || "pretty") as "pretty" | "json",
-  logFile: process.env.ABC_LOG_FILE,
+  logFormat: (process.env.RIGLM_LOG_FORMAT || "pretty") as "pretty" | "json",
+  logFile: process.env.RIGLM_LOG_FILE,
   isProduction: process.env.NODE_ENV === "production",
-  enableUi: !isTruthy(process.env.ABC_DISABLE_UI),
-  enableApi: !isTruthy(process.env.ABC_DISABLE_API),
-  watch: isTruthy(process.env.ABC_WATCH),
+  enableUi: !isTruthy(process.env.RIGLM_DISABLE_UI),
+  enableApi: !isTruthy(process.env.RIGLM_DISABLE_API),
+  watch: isTruthy(process.env.RIGLM_WATCH),
 } satisfies Arguments;
 
 export type Arguments = {

@@ -39,16 +39,16 @@ const LOG_FORMATS = ["pretty", "json"] as const;
 const TRUTHY_VALUES = ["1", "true", "yes", "on"];
 
 interface EnvVars {
-  // ABC_* prefixed (preferred)
-  abcPort: number | undefined;
-  abcHost: string | undefined;
-  abcConfig: string | undefined;
-  abcLogLevel: LogLevel | undefined;
-  abcLogFormat: LogFormat | undefined;
-  abcLogFile: string | undefined;
-  abcDisableUi: boolean;
-  abcDisableApi: boolean;
-  abcWatch: boolean;
+  // RIGLM_* prefixed (preferred)
+  riglmPort: number | undefined;
+  riglmHost: string | undefined;
+  riglmConfig: string | undefined;
+  riglmLogLevel: LogLevel | undefined;
+  riglmLogFormat: LogFormat | undefined;
+  riglmLogFile: string | undefined;
+  riglmDisableUi: boolean;
+  riglmDisableApi: boolean;
+  riglmWatch: boolean;
 
   // Legacy (deprecated, for backward compatibility)
   port: number | undefined;
@@ -57,7 +57,7 @@ interface EnvVars {
 }
 
 /**
- * Read environment variables with ABC_* prefix support
+ * Read environment variables with RIGLM_* prefix support
  */
 function readEnvVars(): EnvVars {
   // Inline helpers
@@ -74,16 +74,16 @@ function readEnvVars(): EnvVars {
     !!v && TRUTHY_VALUES.includes(v.toLowerCase());
 
   return {
-    // ABC_* prefixed (preferred)
-    abcPort: parsePort(process.env.ABC_PORT),
-    abcHost: process.env.ABC_HOST || undefined,
-    abcConfig: process.env.ABC_CONFIG || undefined,
-    abcLogLevel: parseLogLevel(process.env.ABC_LOG_LEVEL),
-    abcLogFormat: parseLogFormat(process.env.ABC_LOG_FORMAT),
-    abcLogFile: process.env.ABC_LOG_FILE || undefined,
-    abcDisableUi: isTruthy(process.env.ABC_DISABLE_UI),
-    abcDisableApi: isTruthy(process.env.ABC_DISABLE_API),
-    abcWatch: isTruthy(process.env.ABC_WATCH),
+    // RIGLM_* prefixed (preferred)
+    riglmPort: parsePort(process.env.RIGLM_PORT),
+    riglmHost: process.env.RIGLM_HOST || undefined,
+    riglmConfig: process.env.RIGLM_CONFIG || undefined,
+    riglmLogLevel: parseLogLevel(process.env.RIGLM_LOG_LEVEL),
+    riglmLogFormat: parseLogFormat(process.env.RIGLM_LOG_FORMAT),
+    riglmLogFile: process.env.RIGLM_LOG_FILE || undefined,
+    riglmDisableUi: isTruthy(process.env.RIGLM_DISABLE_UI),
+    riglmDisableApi: isTruthy(process.env.RIGLM_DISABLE_API),
+    riglmWatch: isTruthy(process.env.RIGLM_WATCH),
 
     // Legacy (deprecated)
     port: parsePort(process.env.PORT),
@@ -97,7 +97,7 @@ function readEnvVars(): EnvVars {
 // ============================================================================
 
 /**
- * Resolve configuration with priority: CLI > Env (ABC_* > legacy) > Default
+ * Resolve configuration with priority: CLI > Env (RIGLM_* > legacy) > Default
  */
 export function resolveConfig(cli: ServeOptions): ResolvedConfig {
   const env = readEnvVars();
@@ -106,7 +106,7 @@ export function resolveConfig(cli: ServeOptions): ResolvedConfig {
   const logLevel: LogLevel =
     cli.verbose ? "debug" :
     cli.logLevel ??
-    env.abcLogLevel ??
+    env.riglmLogLevel ??
     env.logLevel ??
     "info";
 
@@ -114,7 +114,7 @@ export function resolveConfig(cli: ServeOptions): ResolvedConfig {
   let configPath: string | null = null;
   let extensionsPath: string | null = null;
 
-  const explicitPath = cli.config ?? env.abcConfig ?? env.configPath;
+  const explicitPath = cli.config ?? env.riglmConfig ?? env.configPath;
   if (explicitPath) {
     const location = getConfigLocation(explicitPath);
     configPath = location.configPath;
@@ -129,20 +129,20 @@ export function resolveConfig(cli: ServeOptions): ResolvedConfig {
   }
 
   // UI and API: disabled only if explicitly set via CLI or env
-  const enableUi = cli.noUi ? false : !env.abcDisableUi;
-  const enableApi = cli.noApi ? false : !env.abcDisableApi;
+  const enableUi = cli.noUi ? false : !env.riglmDisableUi;
+  const enableApi = cli.noApi ? false : !env.riglmDisableApi;
 
   return {
-    port: cli.port ?? env.abcPort ?? env.port ?? 3000,
-    host: cli.host ?? env.abcHost ?? "0.0.0.0",
+    port: cli.port ?? env.riglmPort ?? env.port ?? 3000,
+    host: cli.host ?? env.riglmHost ?? "0.0.0.0",
     configPath,
     extensionsPath,
     logLevel,
-    logFormat: cli.logFormat ?? env.abcLogFormat ?? "pretty",
-    logFile: cli.logFile ?? env.abcLogFile,
+    logFormat: cli.logFormat ?? env.riglmLogFormat ?? "pretty",
+    logFile: cli.logFile ?? env.riglmLogFile,
     enableUi,
     enableApi,
-    watch: cli.watch ?? env.abcWatch ?? false,
+    watch: cli.watch ?? env.riglmWatch ?? false,
     quiet: cli.quiet ?? false,
     dryRun: cli.dryRun ?? false,
   };

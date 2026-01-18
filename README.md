@@ -1,4 +1,4 @@
-# Personal AI Extension Manager
+# RigLM - An AI Extension Manager
 
 A unified platform that aggregates multiple MCP (Model Context Protocol) servers into a single endpoint. Define your LLM extensions in one place, then connect from any MCP-compatible client (Claude Code, Cursor, Cline, etc.).
 
@@ -10,6 +10,83 @@ A unified platform that aggregates multiple MCP (Model Context Protocol) servers
 - **Tool Filtering** - Filter out unwanted tools at global, endpoint, or server level
 - **Multiple Endpoints** - Create different endpoints for different use cases (development, production, etc.)
 - **Web UI** - React-based dashboard for monitoring and management
+
+## Installation
+
+### Standalone Binary (Recommended)
+
+Build a single executable with embedded web client (no Bun or Node.js runtime required):
+
+```bash
+cd server
+bun install
+bun run build:standalone
+```
+
+This creates `dist/riglm` (~102MB) with all dependencies and assets embedded.
+
+**Install system-wide:**
+
+```bash
+sudo cp dist/riglm /usr/local/bin/
+sudo chmod +x /usr/local/bin/riglm
+```
+
+Or add to your PATH:
+
+```bash
+mkdir -p ~/.local/bin
+cp dist/riglm ~/.local/bin/
+chmod +x ~/.local/bin/riglm
+# Add to ~/.bashrc or ~/.zshrc: export PATH="$HOME/.local/bin:$PATH"
+```
+
+### Initial Setup
+
+Create a configuration file:
+
+```bash
+# Global config in ~/.config/riglm/
+riglm init
+
+# Or local config in ./.riglm/ (project-specific)
+riglm init --local
+```
+
+Template options:
+
+- `minimal` (default) - Basic starter config
+- `standard` - Common server setup
+- `full` - All options with comments
+
+```bash
+riglm init --template standard
+```
+
+Edit the generated `config.json5` to add your MCP servers.
+
+### Running
+
+```bash
+# Start the server (uses config from ~/.config/riglm/ or ./.riglm/)
+riglm serve
+
+# Or simply (serve is the default command)
+riglm
+
+# Custom port and verbose logging
+riglm serve -p 8080 -v
+
+# Show all available options
+riglm help
+```
+
+### Validate Configuration
+
+```bash
+riglm validate
+riglm validate -c /path/to/config.json5
+```
 
 ## Architecture
 
@@ -46,7 +123,7 @@ A unified platform that aggregates multiple MCP (Model Context Protocol) servers
 
 ```bash
 git clone <repository-url>
-cd abc
+cd riglm
 ```
 
 ### 2. Server Setup
@@ -136,6 +213,7 @@ The client will start on http://localhost:8080.
 ### Server Types
 
 **Local Server (stdio)**
+
 ```json5
 {
   "command": "npx",
@@ -148,6 +226,7 @@ The client will start on http://localhost:8080.
 ```
 
 **Remote Server (SSE)** - URL ends with `/sse`
+
 ```json5
 {
   "url": "http://localhost:3001/sse",
@@ -159,6 +238,7 @@ The client will start on http://localhost:8080.
 ```
 
 **Remote Server (HTTP)**
+
 ```json5
 {
   "url": "http://localhost:3002",
@@ -229,20 +309,20 @@ Replace `<endpoint-id>` with the endpoint name from your configuration (e.g., `m
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/:endpointId/sse` | GET | SSE endpoint for MCP client connections |
-| `/:endpointId/messages/:sessionId` | POST | MCP message handling |
-| `/:endpointId/status` | GET | Health check for specific endpoint |
+| Endpoint                             | Method | Description                             |
+| ------------------------------------ | ------ | --------------------------------------- |
+| `/:endpointId/sse`                 | GET    | SSE endpoint for MCP client connections |
+| `/:endpointId/messages/:sessionId` | POST   | MCP message handling                    |
+| `/:endpointId/status`              | GET    | Health check for specific endpoint      |
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `CONFIG_PATH` | `./data/config.local.json5` | Path to configuration file |
-| `PORT` | `3000` | Server port |
-| `LOG_LEVEL` | `info` | Logging level (error, warn, info, debug) |
-| `NODE_ENV` | `development` | Environment mode |
+| Variable        | Default                       | Description                              |
+| --------------- | ----------------------------- | ---------------------------------------- |
+| `CONFIG_PATH` | `./data/config.local.json5` | Path to configuration file               |
+| `PORT`        | `3000`                      | Server port                              |
+| `LOG_LEVEL`   | `info`                      | Logging level (error, warn, info, debug) |
+| `NODE_ENV`    | `development`               | Environment mode                         |
 
 ## Development Commands
 
@@ -271,11 +351,11 @@ bun run lint         # Run ESLint
 ## Project Structure
 
 ```
-abc/
+riglm/
 ├── server/                 # Express backend (hexagonal architecture)
 │   ├── src/
 │   │   ├── index.ts        # Entry point (wires adapters)
-│   │   ├── server.ts       # AbcServer (Express app)
+│   │   ├── server.ts       # RiglmServer (Express app)
 │   │   ├── ports/          # Abstract interfaces (contracts)
 │   │   ├── domain/         # Pure business logic (filter, types, config)
 │   │   ├── adapters/       # Concrete implementations

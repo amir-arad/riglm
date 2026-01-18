@@ -12,7 +12,7 @@
  * Uses @modelcontextprotocol/sdk for MCP client/server communication.
  */
 
-import { AbcServer, ServerDeps } from "../../src/server";
+import { RiglmServer, ServerDeps } from "../../src/server";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { dirname, join } from "path";
 
@@ -31,7 +31,7 @@ describe("Happy Flow E2E", () => {
   let mockBackend1: ReturnType<typeof mocSseServer> | null = null;
   let mockBackend2: ReturnType<typeof mocSseServer> | null = null;
   let client: Client | null = null;
-  let uut: AbcServer | null = null;
+  let uut: RiglmServer | null = null;
   let mockConfig: ReturnType<typeof createMockConfigStorage> | null = null;
 
   // Quiet logger for tests (only errors)
@@ -86,7 +86,7 @@ describe("Happy Flow E2E", () => {
   beforeEach(async () => {
     mockConfig = createMockConfigStorage();
     client = new Client({ name: "happy-flow-client", version: "1.0.0" });
-    uut = new AbcServer(createServerDeps(mockConfig));
+    uut = new RiglmServer(createServerDeps(mockConfig));
   });
 
   afterEach(async () => {

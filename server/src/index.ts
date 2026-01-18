@@ -1,5 +1,5 @@
 /**
- * Entry Point - CLI for ABC Server
+ * Entry Point - CLI for Riglm
  *
  * Routes to CLI commands: serve (default), validate, init, version
  * Handles process signals for graceful shutdown.

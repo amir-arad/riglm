@@ -2,7 +2,7 @@
 
 ## 1. PROJECT OVERVIEW
 
-This project is a **Personal AI Extension Manager** built using **Express 5** and **TypeScript**. It aggregates multiple MCP (Model Context Protocol) servers into a single endpoint, allowing users to define LLM extensions once and connect from any MCP-compatible client (Claude Code, Cursor, Cline).
+This project is an **AI Extension Manager** built using **Express 5** and **TypeScript**. It aggregates multiple MCP (Model Context Protocol) servers into a single endpoint, allowing users to define LLM extensions once and connect from any MCP-compatible client (Claude Code, Cursor, Cline).
 
 ## 2. TECH STACK & VERSIONS
 
@@ -19,6 +19,7 @@ This project is a **Personal AI Extension Manager** built using **Express 5** an
 ## 3. CORE BEHAVIORS (THE "PRIME DIRECTIVE")
 
 You are an expert Senior Software Engineer specializing in TypeScript backend systems. When generating code, you must follow these steps:
+
 1. **Analyze:** Understand the hexagonal architecture and locate the appropriate layer (ports, domain, adapters, application).
 2. **Plan:** For complex changes, outline which files/layers will be affected before coding.
 3. **Implement:** Write clean, modular code that respects the ports/adapters separation.
@@ -27,22 +28,25 @@ You are an expert Senior Software Engineer specializing in TypeScript backend sy
 ## 4. CODING STANDARDS & STYLE
 
 ### General Rules
+
 - **Functional Programming:** Prefer pure functions. Domain logic must be side-effect free.
 - **Immutability:** Use `const` by default. Avoid mutating function arguments.
 - **Naming:**
-    - Variables/Functions: `camelCase` (e.g., `createSession`, `filterTools`)
-    - Types/Interfaces: `PascalCase` (e.g., `McpServerConfig`, `ToolDefinition`)
-    - Ports: Suffix with `Port` (e.g., `LoggerPort`, `ConfigStoragePort`)
-    - Adapters: Suffix with `Adapter` (e.g., `WinstonAdapter`, `FileConfigAdapter`)
-    - Constants: `UPPER_SNAKE_CASE` (e.g., `DEFAULT_PORT`, `MAX_RETRIES`)
+  - Variables/Functions: `camelCase` (e.g., `createSession`, `filterTools`)
+  - Types/Interfaces: `PascalCase` (e.g., `McpServerConfig`, `ToolDefinition`)
+  - Ports: Suffix with `Port` (e.g., `LoggerPort`, `ConfigStoragePort`)
+  - Adapters: Suffix with `Adapter` (e.g., `WinstonAdapter`, `FileConfigAdapter`)
+  - Constants: `UPPER_SNAKE_CASE` (e.g., `DEFAULT_PORT`, `MAX_RETRIES`)
 - **Early Returns:** Use guard clauses to reduce nesting depth.
 
 ### TypeScript Specifics
+
 - **Strict Typing:** NO `any`. Use `unknown` if necessary and narrow types.
 - **Zod First:** All external data (config files, API inputs, MCP messages) MUST be validated with Zod schemas defined in `domain/`.
 - **Infer from Zod:** Derive TypeScript types from Zod schemas using `z.infer<typeof Schema>`.
 
 ### Error Handling
+
 - Use custom error classes from `domain/error.ts` for domain-specific errors.
 - Wrap external calls (MCP client connections, file I/O) in try/catch.
 - Log errors structurally via `LoggerPort` - never use `console.log`.
@@ -74,6 +78,7 @@ You are an expert Senior Software Engineer specializing in TypeScript backend sy
 **Dependency Rule:** Inner layers MUST NOT import from outer layers. Domain never imports adapters.
 
 ### Adding New Features
+
 1. Define types/schemas in `domain/` (Zod first)
 2. Define port interface in `ports/` if external I/O needed
 3. Implement business logic in `domain/` (pure functions)
@@ -82,6 +87,7 @@ You are an expert Senior Software Engineer specializing in TypeScript backend sy
 6. Add service in `application/` if orchestration needed
 
 ### Configuration
+
 - Config file: `data/config.local.json5`
 - Zod schemas: `domain/types.ts` (config), `domain/extension.ts` (extensions)
 - Filter priority: Server filters > Endpoint filters > Global filters
