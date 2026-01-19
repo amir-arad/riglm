@@ -136,7 +136,10 @@ describe("Streamable HTTP Transport E2E", () => {
   test("session ID returned in Mcp-Session-Id header", async () => {
     const response = await fetch(`http://localhost:${TEST_PORT}/test_endpoint/mcp`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "initialize",
@@ -156,7 +159,10 @@ describe("Streamable HTTP Transport E2E", () => {
     // First request establishes session
     const initResponse = await fetch(`http://localhost:${TEST_PORT}/test_endpoint/mcp`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         method: "initialize",
@@ -176,6 +182,7 @@ describe("Streamable HTTP Transport E2E", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
         "Mcp-Session-Id": sessionId!,
       },
       body: JSON.stringify({
@@ -189,6 +196,7 @@ describe("Streamable HTTP Transport E2E", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
         "Mcp-Session-Id": sessionId!,
       },
       body: JSON.stringify({ jsonrpc: "2.0", method: "tools/list", id: 2 }),

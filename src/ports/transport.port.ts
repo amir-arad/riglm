@@ -122,8 +122,11 @@ export interface HttpServerTransportPort extends SdkTransportPort {
   /**
    * Handle an incoming HTTP request
    * Delegates to the underlying SDK transport
+   * @param req The HTTP request
+   * @param res The HTTP response
+   * @param body Optional pre-parsed request body (required when body has been consumed by middleware)
    */
-  handleRequest(req: HttpRequestPort, res: HttpResponsePort): Promise<void>;
+  handleRequest(req: HttpRequestPort, res: HttpResponsePort, body?: unknown): Promise<void>;
 }
 
 // ============================================================================

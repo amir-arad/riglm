@@ -13,20 +13,26 @@ import {
 /**
  * Adapter for Streamable HTTP server transport to accept incoming MCP client connections.
  * Wraps the MCP SDK StreamableHTTPServerTransport class.
+ *
+ * Note: The session ID is pre-generated in the constructor so it's available immediately
+ * for session management, before handleRequest is called.
  */
 export class HttpServerTransportAdapter implements HttpServerTransportPort {
   private transport: StreamableHTTPServerTransport;
-  private _sessionId: string = "";
+  private _sessionId: string;
 
   constructor(options: HttpServerTransportOptions) {
-    const sessionIdGenerator =
-      options.sessionIdGenerator ??
-      (() => `http-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`);
+    // Pre-generate session ID so it's available immediately
+    // The SDK will use this same ID when onsessioninitialized is called
+    this._sessionId =
+      options.sessionIdGenerator?.() ??
+      `http-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
     this.transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator,
+      sessionIdGenerator: () => this._sessionId,
+      // Enable JSON responses instead of SSE streaming for simple request/response patterns
+      enableJsonResponse: true,
       onsessioninitialized: (sessionId: string) => {
-        this._sessionId = sessionId;
         options.onsessioninitialized?.(sessionId);
       },
     });
@@ -36,9 +42,10 @@ export class HttpServerTransportAdapter implements HttpServerTransportPort {
     return this._sessionId;
   }
 
-  async handleRequest(req: HttpRequestPort, res: HttpResponsePort): Promise<void> {
+  async handleRequest(req: HttpRequestPort, res: HttpResponsePort, body?: unknown): Promise<void> {
     // Cast to any since SDK expects Express types but our abstraction is compatible
-    await this.transport.handleRequest(req as never, res as never);
+    // Pass body as third parameter since Express middleware has already consumed the body stream
+    await this.transport.handleRequest(req as never, res as never, body);
   }
 
   async start(): Promise<void> {

@@ -7,20 +7,23 @@ import { ApiError } from "../../domain/error";
 import { HostsService } from "../../application/hosts.service";
 import type { LoggerPort } from "../../ports/logger.port";
 import { Services } from "../../etc/service";
+import { HttpServerTransportPort, ServerTransportFactory } from "../../ports/transport.port";
 import { SseServerTransportAdapter } from "../mcp/transports/sse-server.adapter";
 
-export function makeHostsRoutes(hostsServices: Services<HostsService>, logger: LoggerPort) {
+export function makeHostsRoutes(
+  hostsServices: Services<HostsService>,
+  serverTransportFactory: ServerTransportFactory,
+  logger: LoggerPort
+) {
   const hostsRoutes = Router();
 
   hostsRoutes.param("endpointId", async (req, res, next, endpointId) => {
     try {
-      // Create AbortController for param middleware
-      const controller = new AbortController();
-      res.once("close", () => controller.abort());
-
-      const hostsService = await hostsServices.get(endpointId, {
-        signal: controller.signal,
-      });
+      // Note: We don't pass an abort signal here because:
+      // - For SSE: the connection stays open and cleanup is handled in the route
+      // - For HTTP: each request is independent and doesn't own the service
+      // Individual transports manage their own session lifecycle
+      const hostsService = await hostsServices.get(endpointId, {});
       if (!hostsService) {
         res.writeHead(404, { "Content-Type": "text/plain" });
         res.end("Endpoint not found");
@@ -83,6 +86,62 @@ export function makeHostsRoutes(hostsServices: Services<HostsService>, logger: L
     await handleMessage(sessionId, req, res, logger);
   });
 
+  // Streamable HTTP transport route - handles all MCP communication over HTTP
+  hostsRoutes.all("/:endpointId/mcp", async (req, res): Promise<void> => {
+    try {
+      const request = req as EndpointRequest;
+      if (!request.hostsService) {
+        res.status(404).json({ error: "Endpoint not found" });
+        return;
+      }
+
+      const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+      // Existing session - route to it
+      if (sessionId) {
+        if (!request.hostsService.hasSession(sessionId)) {
+          res.status(404).json({ error: "Session not found" });
+          return;
+        }
+
+        const session = request.hostsService.getSession(sessionId);
+        if (!session?.transport || !isHttpServerTransport(session.transport)) {
+          res.status(400).json({ error: "Invalid transport type for session" });
+          return;
+        }
+
+        await session.transport.handleRequest(req, res, req.body);
+        return;
+      }
+
+      // New session - only POST allowed for initialization
+      if (req.method !== "POST") {
+        res.status(400).json({ error: "New sessions require POST with initialize request" });
+        return;
+      }
+
+      const transport = serverTransportFactory.createHttpServerTransport({});
+
+      await request.hostsService.createSession(transport, {});
+      await transport.handleRequest(req, res, req.body);
+      logger.info("HTTP session created:", { sessionId: transport.sessionId });
+
+      // Note: HTTP sessions persist across requests and are cleaned up by:
+      // - Inactivity timeout in TransportSessionManager
+      // - Explicit DELETE request (if implemented)
+      // Unlike SSE, we don't remove the session when the request ends
+    } catch (error) {
+      logger.error("Error handling MCP HTTP request:", error);
+      if (!res.headersSent) {
+        if (error instanceof ApiError) {
+          res.status(error.statusCode).json({ error: error.message });
+        } else {
+          res.status(500).json({ error: "Internal server error" });
+        }
+      }
+    }
+  });
+
   hostsRoutes.get("/:endpointId/status", (req, res) => {
     const { hostsService } = req as EndpointRequest;
     res.json({
@@ -100,6 +159,18 @@ type EndpointRequest = Request<{
 }> & {
   hostsService: HostsService;
 };
+
+/**
+ * Type guard to check if a transport supports HTTP handleRequest
+ */
+function isHttpServerTransport(transport: unknown): transport is HttpServerTransportPort {
+  return (
+    transport !== null &&
+    typeof transport === "object" &&
+    "handleRequest" in transport &&
+    typeof (transport as HttpServerTransportPort).handleRequest === "function"
+  );
+}
 
 async function handleMessage(sessionId: unknown, req: Request, res: Response, logger: LoggerPort) {
   const { hostsService } = req as EndpointRequest;
