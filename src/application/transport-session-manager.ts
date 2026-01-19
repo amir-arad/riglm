@@ -1,7 +1,8 @@
-import { setTimeout } from "timers/promises";
-import { TransportPort } from "../ports/transport.port";
+import { Closeable, PoolContext, closeAll } from "../etc/closeable";
+
 import type { LoggerPort } from "../ports/logger.port";
-import { closeAll, Closeable, PoolContext } from "../etc../etc/closeable
+import { TransportPort } from "../ports/transport.port";
+import { setTimeout } from "timers/promises";
 
 export type TransportSession = ReturnType<
   TransportSessionManager["createSession"]

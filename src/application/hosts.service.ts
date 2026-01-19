@@ -1,6 +1,6 @@
 import { BackendConnection, SessionBackendsFactory } from "./backend.service";
-import { Closeable, CloseablePool, PoolContext, createCloseablePool } from "../etc/closeable";
 import { McpServerFactory, RequestContext } from "../ports/mcp-server.port";
+import { PoolContext, createCloseablePool } from "../etc/closeable";
 import {
   ToolDefinition,
   ToolHandler,
