@@ -1,45 +1,38 @@
-/**
- * Config Locator
- *
- * Handles auto-detection of configuration files in standard locations.
- * @see docs/cli-design.md for specification
- */
+
 
 import { existsSync } from "fs";
 import { join } from "path";
 import { homedir, platform } from "os";
 
-// ============================================================================
-// Types
-// ============================================================================
+
+
+
 
 export interface ConfigLocation {
-  /** Path to config.json5 */
+  
   configPath: string;
-  /** Path to extensions.json (derived from same directory) */
+  
   extensionsPath: string;
-  /** Directory containing both files */
+  
   directory: string;
-  /** Whether this is a local (project-level) override */
+  
   isLocal: boolean;
 }
 
-// ============================================================================
-// Constants
-// ============================================================================
+
+
+
 
 const CONFIG_FILENAME = "config.json5";
 const EXTENSIONS_FILENAME = "extensions.json";
 const LOCAL_DIR_NAME = ".riglm";
 const APP_NAME = "riglm";
 
-// ============================================================================
-// Platform-specific Paths
-// ============================================================================
 
-/**
- * Get the XDG config directory (or platform equivalent)
- */
+
+
+
+
 function getXdgConfigHome(): string {
   if (process.env.XDG_CONFIG_HOME) {
     return process.env.XDG_CONFIG_HOME;
@@ -47,48 +40,44 @@ function getXdgConfigHome(): string {
   return join(homedir(), ".config");
 }
 
-/**
- * Get platform-specific config directories in order of preference
- */
+
 function getPlatformConfigDirs(): string[] {
   const home = homedir();
   const os = platform();
 
   switch (os) {
     case "darwin":
-      // macOS: prefer XDG, then Application Support
+      
       return [
         join(getXdgConfigHome(), APP_NAME),
         join(home, "Library", "Application Support", APP_NAME),
       ];
     case "win32":
-      // Windows: prefer APPDATA
+      
       return [
         process.env.APPDATA ? join(process.env.APPDATA, APP_NAME) : join(home, "AppData", "Roaming", APP_NAME),
       ];
     default:
-      // Linux and others: XDG config
+      
       return [join(getXdgConfigHome(), APP_NAME)];
   }
 }
 
-// ============================================================================
-// Location Detection
-// ============================================================================
 
-/**
- * Get all possible config locations in priority order
- */
+
+
+
+
 function getSearchLocations(): Array<{ dir: string; isLocal: boolean }> {
   const locations: Array<{ dir: string; isLocal: boolean }> = [];
 
-  // 1. Local override (project-level): ./.riglm/
+  
   locations.push({
     dir: join(process.cwd(), LOCAL_DIR_NAME),
     isLocal: true,
   });
 
-  // 2. Platform-specific global locations
+  
   for (const dir of getPlatformConfigDirs()) {
     locations.push({ dir, isLocal: false });
   }
@@ -96,15 +85,7 @@ function getSearchLocations(): Array<{ dir: string; isLocal: boolean }> {
   return locations;
 }
 
-/**
- * Find the first existing config file in standard locations
- *
- * Search order:
- * 1. ./.riglm/config.json5 (local override)
- * 2. ~/.config/riglm/config.json5 (XDG default on Linux/macOS)
- * 3. ~/Library/Application Support/riglm/config.json5 (macOS alternative)
- * 4. %APPDATA%\riglm\config.json5 (Windows)
- */
+
 export function findConfig(): ConfigLocation | null {
   for (const { dir, isLocal } of getSearchLocations()) {
     const configPath = join(dir, CONFIG_FILENAME);
@@ -120,12 +101,7 @@ export function findConfig(): ConfigLocation | null {
   return null;
 }
 
-/**
- * Get the default config location for initialization
- *
- * @param local If true, returns local project directory
- * @param customPath Optional custom path
- */
+
 export function getDefaultConfigLocation(local: boolean, customPath?: string): ConfigLocation {
   let directory: string;
   let isLocal: boolean;
@@ -137,7 +113,7 @@ export function getDefaultConfigLocation(local: boolean, customPath?: string): C
     directory = join(process.cwd(), LOCAL_DIR_NAME);
     isLocal = true;
   } else {
-    // Default to first platform config dir
+    
     const platformDirs = getPlatformConfigDirs();
     directory = platformDirs[0];
     isLocal = false;
@@ -151,9 +127,7 @@ export function getDefaultConfigLocation(local: boolean, customPath?: string): C
   };
 }
 
-/**
- * Get config location from an explicit path
- */
+
 export function getConfigLocation(configPath: string): ConfigLocation {
   const directory = join(configPath, "..");
   const isLocal = directory.endsWith(LOCAL_DIR_NAME);

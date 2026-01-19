@@ -1,14 +1,9 @@
-/**
- * Stdio Client Transport Adapter - Wraps MCP SDK StdioClientTransport
- */
+
 
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { SdkTransportPort, StdioTransportConfig } from "../../../ports/transport.port";
 
-/**
- * Adapter for stdio transport to local MCP servers.
- * Wraps the MCP SDK StdioClientTransport class.
- */
+
 export class StdioClientTransportAdapter implements SdkTransportPort {
   private transport: StdioClientTransport;
   private _sessionId: string;
@@ -18,18 +13,18 @@ export class StdioClientTransportAdapter implements SdkTransportPort {
       command: config.command,
       args: config.args,
       env: {
-        // Inherit process environment
+        
         ...Object.fromEntries(
           Object.entries(process.env)
             .filter(([_, v]) => v !== undefined)
             .map(([k, v]) => [k, v as string])
         ),
-        // Override with config-specific env vars
+        
         ...config.env,
       },
     });
 
-    // Generate a session ID since StdioClientTransport doesn't have one until started
+    
     this._sessionId = `stdio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
@@ -61,9 +56,7 @@ export class StdioClientTransportAdapter implements SdkTransportPort {
     return this.transport.onclose;
   }
 
-  /**
-   * Get the underlying SDK transport for direct SDK usage
-   */
+  
   getSdkTransport(): StdioClientTransport {
     return this.transport;
   }

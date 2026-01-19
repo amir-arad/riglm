@@ -1,32 +1,82 @@
-/**
- * Tool Aggregator - Pure domain logic for tool namespacing and aggregation
- * NO EXTERNAL DEPENDENCIES
- */
 
-import { ToolDefinition } from "./types";
+
 import { FilterEngine } from "./filter-engine";
 
-/**
- * Aggregates tools from multiple MCP servers with namespacing and filtering.
- */
+
+
+
+
+
+export type JsonSchema = Record<string, unknown>;
+
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: JsonSchema;
+}
+
+
+export interface ToolResponse {
+  content: ToolContent[];
+  isError?: boolean;
+}
+
+
+export type ToolContent =
+  | TextContent
+  | ImageContent
+  | AudioContent
+  | ResourceContent;
+
+
+export interface TextContent {
+  type: "text";
+  text: string;
+}
+
+
+export interface ImageContent {
+  type: "image";
+  data: string;
+  mimeType: string;
+}
+
+
+export interface AudioContent {
+  type: "audio";
+  data: string;
+  mimeType: string;
+}
+
+
+export interface ResourceContent {
+  type: "resource";
+  resource: {
+    uri: string;
+    text?: string;
+    mimeType?: string;
+  };
+}
+
+
+export type ToolHandler = (
+  args: Record<string, unknown> | undefined
+) => Promise<ToolResponse>;
+
+
+
+
+
+
 export class ToolAggregator {
-  /**
-   * Create a namespaced tool name: serverName-toolName
-   * Server names have dashes removed to avoid ambiguity in parsing.
-   * @param serverName The MCP server name
-   * @param toolName The original tool name
-   * @returns Namespaced tool name
-   */
+  
   static namespace(serverName: string, toolName: string): string {
-    // Remove dashes from server name to avoid ambiguity when parsing
+    
     return `${serverName.replace(/-/g, "")}-${toolName}`;
   }
 
-  /**
-   * Parse a namespaced tool name back into server and tool components.
-   * @param namespacedName The namespaced tool name (e.g., "github-search_code")
-   * @returns Object with serverName and toolName, or null if invalid
-   */
+  
   static parseNamespacedName(namespacedName: string): {
     serverName: string;
     toolName: string;
@@ -42,11 +92,7 @@ export class ToolAggregator {
     };
   }
 
-  /**
-   * Aggregate tools from multiple servers with namespacing and filtering.
-   * @param servers Array of server tool sets with filter engines
-   * @returns Aggregated and filtered tool definitions
-   */
+  
   static aggregateTools(
     servers: Array<{
       serverName: string;
@@ -60,7 +106,7 @@ export class ToolAggregator {
       for (const tool of tools) {
         const namespacedName = this.namespace(serverName, tool.name);
 
-        // Apply filtering
+        
         if (filterEngine.shouldFilter(namespacedName)) {
           continue;
         }
@@ -76,12 +122,7 @@ export class ToolAggregator {
     return aggregated;
   }
 
-  /**
-   * Build a tool handler lookup map from aggregated servers.
-   * @param servers Array of server connections with their tools
-   * @param callTool Function to call a tool on a specific server
-   * @returns Map from namespaced tool name to handler function
-   */
+  
   static buildToolHandlers<T>(
     servers: Array<{
       serverName: string;

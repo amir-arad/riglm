@@ -10,10 +10,10 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { setTimeout } from "node:timers/promises";
 import winston from "winston";
-import { RiglmServer, ServerDeps } from "../../src/server";
+import { RiglmServer, ServerDeps } from "../../src/application/riglm-server";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
 import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
-import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
+import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports/transport-factory.adapter";
 import { createMockConfigStorage } from "../mocks/mock-config";
 import { mocSseServer } from "../fixtures/mock-sse-server";
 

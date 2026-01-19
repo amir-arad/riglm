@@ -3,7 +3,7 @@
  */
 
 import { ConfiguratorPort } from "../../src/ports/config-storage.port";
-import { Config } from "../../src/domain/types";
+import { Config } from "../../src/domain/config-resolver";
 
 /**
  * Create a mock config storage with a provided config

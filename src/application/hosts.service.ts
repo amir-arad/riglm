@@ -1,36 +1,29 @@
-/**
- * Hosts Service - Application layer for MCP tool aggregation
- * Uses ports for all external dependencies
- */
+
 
 import { McpServerFactory, RequestContext } from "../ports/mcp-server.port";
 import { TransportPort } from "../ports/transport.port";
 import { ConfiguratorPort } from "../ports/config-storage.port";
 import { LoggerPort } from "../ports/logger.port";
-import { ToolDefinition, ToolHandler, ToolResponse } from "../domain/types";
+import { ToolDefinition, ToolHandler, ToolResponse } from "../domain/tool-aggregator";
 import { FilterEngine } from "../domain/filter-engine";
 import { ToolAggregator } from "../domain/tool-aggregator";
 import { ApiError } from "../domain/error";
 import { makeServicesContainer, ServiceOptions } from "../etc/service";
-import { TransportSessionManager, TransportSession } from "../host-gateway/transport-session-manager";
+import { TransportSessionManager, TransportSession } from "./transport-session-manager";
 import { SessionBackendsFactory, BackendConnection } from "./backend.service";
 
-// ============================================================================
-// Types
-// ============================================================================
 
-/**
- * A host session with aggregated tools
- */
+
+
+
+
 interface HostSession {
   tools: ToolDefinition[];
   toolHandlers: Map<string, ToolHandler>;
   close: () => Promise<void>;
 }
 
-/**
- * Dependencies required by the hosts service
- */
+
 export interface HostsServiceDeps {
   serverFactory: McpServerFactory;
   config: ConfiguratorPort;
@@ -38,9 +31,7 @@ export interface HostsServiceDeps {
   sessionBackends: SessionBackendsFactory;
 }
 
-/**
- * The hosts service instance returned by the factory
- */
+
 export interface HostsService {
   endpointId: string;
   hasSession: (sessionId: string) => boolean;
@@ -51,13 +42,11 @@ export interface HostsService {
   close: () => Promise<void>;
 }
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
-/**
- * Create a factory for hosts services
- */
+
+
+
+
 export function createHostsServiceFactory(deps: HostsServiceDeps) {
   return makeServicesContainer(
     (endpointId, options) => createHostsService(endpointId, deps, options),
@@ -66,9 +55,7 @@ export function createHostsServiceFactory(deps: HostsServiceDeps) {
   );
 }
 
-/**
- * Create a hosts service for a specific endpoint
- */
+
 async function createHostsService(
   endpointId: string,
   deps: HostsServiceDeps,
@@ -81,7 +68,7 @@ async function createHostsService(
     throw ApiError.notFound(`Endpoint "${endpointId}" not found`);
   }
 
-  // Create MCP server for this endpoint
+  
   const mcpServer = serverFactory.create({
     name: endpointId,
     description: endpoint.description || `Endpoint ${endpointId}`,
@@ -89,23 +76,20 @@ async function createHostsService(
     capabilities: { tools: { listChanged: true } },
   });
 
-  // Transport session manager
+  
   const tsm = new TransportSessionManager(logger);
 
-  // Filter engine cache
+  
   const filterEngineCache = new Map<string, FilterEngine>();
 
-  /**
-   * Get or create a filter engine for a server
-   * Global filters are already namespaced, server-specific filters need namespacing
-   */
+  
   function getFilterEngine(serverName: string): FilterEngine {
     const currentConfig = config.get();
     const serverConfig = currentConfig.servers[serverName];
     const serverFilters = serverConfig?.filters || [];
     const globalFilters = currentConfig.filters || [];
 
-    // Combine: global filters (already namespaced) + server filters (need namespacing)
+    
     const patterns = [
       ...globalFilters,
       ...serverFilters.map((f) => ToolAggregator.namespace(serverName, f)),
@@ -124,9 +108,7 @@ async function createHostsService(
     return engine;
   }
 
-  /**
-   * Create a host session for a client
-   */
+  
   async function createHostSession(
     sessionId: string,
     sessionOptions?: ServiceOptions
@@ -134,12 +116,12 @@ async function createHostsService(
     const backends = sessionBackends(sessionId, sessionOptions);
     const serverNames = endpoint.servers;
 
-    // Connect to all backend servers
+    
     const connections: BackendConnection[] = await Promise.all(
       serverNames.map((name) => backends.get(name, sessionOptions))
     );
 
-    // Build aggregated tool list with filtering
+    
     const serverData = connections.map((conn) => ({
       serverName: conn.serverName,
       tools: conn.tools,
@@ -148,7 +130,7 @@ async function createHostsService(
 
     const aggregatedTools = ToolAggregator.aggregateTools(serverData);
 
-    // Build tool handlers map
+    
     const toolHandlers = new Map<string, ToolHandler>();
     for (const conn of connections) {
       for (const tool of conn.tools) {
@@ -180,34 +162,32 @@ async function createHostsService(
     };
   }
 
-  // Host sessions container
+  
   const hostSessions = makeServicesContainer(createHostSession, `HostSession`, logger);
 
-  /**
-   * Create a new session for a transport
-   */
+  
   async function createSession(
     transport: TransportPort,
     sessionOptions?: ServiceOptions
   ): Promise<string> {
-    // Create transport session
+    
     const transportSession = tsm.createSession(transport, sessionOptions);
     const { sessionId } = transportSession;
 
-    // Connect MCP server to transport
+    
     await mcpServer.connect(transport);
     logger.info(`New session ${sessionId} for endpoint ${endpointId}`);
 
-    // Create host session (connects to backends)
+    
     const hostSession = await hostSessions.get(sessionId, sessionOptions);
 
-    // Register for cleanup
+    
     transportSession.addService("hostSession", hostSession);
 
     return sessionId;
   }
 
-  // Set up MCP request handlers
+  
   mcpServer.setListToolsHandler(async (ctx: RequestContext) => {
     const session = await hostSessions.get(ctx.sessionId, { signal: ctx.signal });
     return { tools: session.tools };

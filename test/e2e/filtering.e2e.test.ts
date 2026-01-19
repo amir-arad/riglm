@@ -1,11 +1,11 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { Config } from "../../src/domain/types";
-import { RiglmServer, ServerDeps } from "../../src/server";
+import { Config } from "../../src/domain/config-resolver";
+import { RiglmServer, ServerDeps } from "../../src/application/riglm-server";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
 import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
-import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
+import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports/transport-factory.adapter";
 import { createMockConfigStorage } from "../mocks/mock-config";
 import { mocSseServer } from "../fixtures/mock-sse-server";
 import winston from "winston";

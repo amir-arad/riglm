@@ -1,40 +1,31 @@
-/**
- * Management Routes - REST API for configuration management
- * Handles CRUD operations for servers, endpoints, and settings.
- */
+
 
 import { Router, Request, Response, NextFunction } from "express";
 import { ConfigService } from "../../application/config.service";
 import type { LoggerPort } from "../../ports/logger.port";
 
-// Type for requests with :id parameter
+
 type IdRequest = Request<{ id: string }>;
 
-/**
- * Create management routes for the REST API
- * @param configService Service for config CRUD operations
- * @param logger Logger instance
- */
+
 export function makeManagementRoutes(
   configService: ConfigService,
   logger: LoggerPort
 ): Router {
   const router = Router();
 
-  // Async handler wrapper to catch errors
+  
   const asyncHandler =
     <T extends Request>(fn: (req: T, res: Response, next: NextFunction) => Promise<void>) =>
     (req: Request, res: Response, next: NextFunction) => {
       Promise.resolve(fn(req as T, res, next)).catch(next);
     };
 
-  // --------------------------------------------------------------------------
-  // Servers
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * GET /api/servers - List all servers
-   */
+  
   router.get(
     "/servers",
     asyncHandler(async (_req, res) => {
@@ -43,9 +34,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * GET /api/servers/:id - Get a single server
-   */
+  
   router.get(
     "/servers/:id",
     asyncHandler<IdRequest>(async (req, res) => {
@@ -54,9 +43,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * POST /api/servers - Create a new server
-   */
+  
   router.post(
     "/servers",
     asyncHandler(async (req, res) => {
@@ -66,9 +53,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * PUT /api/servers/:id - Update an existing server
-   */
+  
   router.put(
     "/servers/:id",
     asyncHandler<IdRequest>(async (req, res) => {
@@ -78,9 +63,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * DELETE /api/servers/:id - Delete a server
-   */
+  
   router.delete(
     "/servers/:id",
     asyncHandler<IdRequest>(async (req, res) => {
@@ -90,13 +73,11 @@ export function makeManagementRoutes(
     })
   );
 
-  // --------------------------------------------------------------------------
-  // Endpoints
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * GET /api/endpoints - List all endpoints
-   */
+  
   router.get(
     "/endpoints",
     asyncHandler(async (_req, res) => {
@@ -105,9 +86,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * GET /api/endpoints/:id - Get a single endpoint
-   */
+  
   router.get(
     "/endpoints/:id",
     asyncHandler<IdRequest>(async (req, res) => {
@@ -116,9 +95,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * POST /api/endpoints - Create a new endpoint
-   */
+  
   router.post(
     "/endpoints",
     asyncHandler(async (req, res) => {
@@ -128,9 +105,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * PUT /api/endpoints/:id - Update an existing endpoint
-   */
+  
   router.put(
     "/endpoints/:id",
     asyncHandler<IdRequest>(async (req, res) => {
@@ -140,9 +115,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * DELETE /api/endpoints/:id - Delete an endpoint
-   */
+  
   router.delete(
     "/endpoints/:id",
     asyncHandler<IdRequest>(async (req, res) => {
@@ -152,13 +125,11 @@ export function makeManagementRoutes(
     })
   );
 
-  // --------------------------------------------------------------------------
-  // Status
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * GET /api/status - Get server status
-   */
+  
   router.get(
     "/status",
     asyncHandler(async (_req, res) => {
@@ -167,13 +138,11 @@ export function makeManagementRoutes(
     })
   );
 
-  // --------------------------------------------------------------------------
-  // Settings
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * GET /api/settings - Get global settings
-   */
+  
   router.get(
     "/settings",
     asyncHandler(async (_req, res) => {
@@ -182,9 +151,7 @@ export function makeManagementRoutes(
     })
   );
 
-  /**
-   * PUT /api/settings - Update global settings
-   */
+  
   router.put(
     "/settings",
     asyncHandler(async (req, res) => {
@@ -194,13 +161,11 @@ export function makeManagementRoutes(
     })
   );
 
-  // --------------------------------------------------------------------------
-  // Config
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * POST /api/config/reload - Reload configuration from file
-   */
+  
   router.post(
     "/config/reload",
     asyncHandler(async (_req, res) => {

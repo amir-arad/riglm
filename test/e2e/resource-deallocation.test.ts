@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { createServer } from "http";
 import { AddressInfo } from "net";
 import { setTimeout } from "timers/promises";
-import { TransportSessionManager } from "../../src/host-gateway/transport-session-manager";
+import { TransportSessionManager } from "../../src/application/transport-session-manager";
 import { createSilentLogger } from "../mocks/mock-logger";
 
 function fakeTransport(sessionId: string = "test") {

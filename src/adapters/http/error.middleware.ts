@@ -1,6 +1,4 @@
-/**
- * Express error handling middleware - HTTP adapter layer
- */
+
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../../domain/error";
 import type { LoggerPort } from "../../ports/logger.port";
@@ -50,7 +48,7 @@ export const errorHandler =
       });
     }
 
-    // Return full error response with status, message, code, data
+    
     res.status(statusCode).json({
       status: "error",
       message: error.message,

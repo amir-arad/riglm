@@ -1,13 +1,3 @@
-/**
- * Help Text
- *
- * Formatted help output for the CLI.
- * @see docs/cli-design.md for specification
- */
-
-// ============================================================================
-// Help Text
-// ============================================================================
 
 const HELP_TEXT = `
 riglm - AI Extension Manager
@@ -61,13 +51,6 @@ Documentation:
   https://github.com/your-org/riglm
 `.trim();
 
-// ============================================================================
-// Print Functions
-// ============================================================================
-
-/**
- * Print main help text
- */
 export function printHelp(): void {
   console.log(HELP_TEXT);
 }

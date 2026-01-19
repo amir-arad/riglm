@@ -1,16 +1,11 @@
-/**
- * Startup Banner
- *
- * Displays server startup information with box drawing.
- * @see docs/cli-design.md for specification
- */
 
-import type { Config } from "../../domain/types";
+
+import type { Config } from "../../domain/config-resolver";
 import type { ResolvedConfig } from "../config/resolved-config";
 
-// ============================================================================
-// ANSI Colors
-// ============================================================================
+
+
+
 
 const C = {
   reset: "\x1b[0m",
@@ -21,9 +16,9 @@ const C = {
   dim: "\x1b[2m",
 };
 
-// ============================================================================
-// Types
-// ============================================================================
+
+
+
 
 export interface BannerInfo {
   version: string;
@@ -31,57 +26,53 @@ export interface BannerInfo {
   appConfig: Config | null;
 }
 
-// ============================================================================
-// Box Drawing
-// ============================================================================
+
+
+
 
 const BOX = {
-  topLeft: "\u256D",     // ╭
-  topRight: "\u256E",    // ╮
-  bottomLeft: "\u2570",  // ╰
-  bottomRight: "\u256F", // ╯
-  horizontal: "\u2500",  // ─
-  vertical: "\u2502",    // │
+  topLeft: "\u256D",     
+  topRight: "\u256E",    
+  bottomLeft: "\u2570",  
+  bottomRight: "\u256F", 
+  horizontal: "\u2500",  
+  vertical: "\u2502",    
 };
 
-/**
- * Create a box around text lines
- */
+
 function createBox(lines: string[], width: number): string[] {
   const output: string[] = [];
   const innerWidth = width - 2;
 
-  // Top border
+  
   output.push(BOX.topLeft + BOX.horizontal.repeat(innerWidth) + BOX.topRight);
 
-  // Content lines
+  
   for (const line of lines) {
     const padding = innerWidth - line.length;
     output.push(BOX.vertical + "  " + line + " ".repeat(Math.max(0, padding - 2)) + BOX.vertical);
   }
 
-  // Bottom border
+  
   output.push(BOX.bottomLeft + BOX.horizontal.repeat(innerWidth) + BOX.bottomRight);
 
   return output;
 }
 
-// ============================================================================
-// Banner Generation
-// ============================================================================
 
-/**
- * Print the full startup banner
- */
+
+
+
+
 export function printBanner(info: BannerInfo): void {
   const { version, config, appConfig } = info;
 
-  // Branded logo
+  
   console.log();
   console.log(`    ${C.white}{${C.cyan}Ξ${C.white}}${C.reset}`);
   console.log(`   ${C.bold}RigLM${C.reset}`);
 
-  // Header box
+  
   const headerLines = [
     "The Intelligent Context Router",
     `v${version}`,
@@ -90,14 +81,14 @@ export function printBanner(info: BannerInfo): void {
   console.log(box.join("\n"));
   console.log();
 
-  // Configuration details
+  
   if (config.configPath) {
     console.log(`  Config:     ${config.configPath}`);
   } else {
     console.log("  Config:     (no configuration file found)");
   }
 
-  // Show endpoints and servers if config is loaded
+  
   if (appConfig) {
     const endpointNames = Object.keys(appConfig.endpoints || {});
     const serverCount = Object.keys(appConfig.servers || {}).length;
@@ -118,7 +109,7 @@ export function printBanner(info: BannerInfo): void {
 
   console.log();
 
-  // URLs
+  
   const baseUrl = config.host === "0.0.0.0" ? "localhost" : config.host;
   console.log(`  MCP:        http://${baseUrl}:${config.port}/:endpoint/sse`);
 
@@ -135,17 +126,13 @@ export function printBanner(info: BannerInfo): void {
   console.log();
 }
 
-/**
- * Print a minimal startup message (used with --quiet)
- */
+
 export function printQuietBanner(config: ResolvedConfig): void {
   const baseUrl = config.host === "0.0.0.0" ? "localhost" : config.host;
   console.log(`RigLM listening on http://${baseUrl}:${config.port}`);
 }
 
-/**
- * Print dry-run output showing effective configuration
- */
+
 export function printDryRun(info: BannerInfo): void {
   const { version, config, appConfig } = info;
 

@@ -34,63 +34,6 @@ Transform the MCP router (RigLM) into a full-featured Personal AI Extension Mana
 - Removed `connectServerImpl()` and related code
 - Cleaned up imports
 
-### 1.4 Extension Registry ✅
-
-File-based extension CRUD operations with Zod validation.
-
-**Design Document**: See [extension-registry-design.md](./extension-registry-design.md) for terminology, design decisions, and rationale.
-
-**Files:**
-```
-src/extension-manager/
-├── index.ts                 # Public exports
-└── extension.registry.ts    # CRUD operations
-```
-
-**Domain types:** `src/domain/extension.ts` (Zod schemas)
-**Storage adapter:** `src/adapters/storage/file-extension.adapter.ts`
-
-**Data Model:**
-```typescript
-interface Extension {
-  id: string;
-  type: "mcp-server";
-  name: string;
-  description?: string;
-  enabled: boolean;
-  config: LocalServerConfig | RemoteServerConfig;
-  filters?: string[];
-  tags?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface LocalServerConfig {
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
-}
-
-interface RemoteServerConfig {
-  url: string;
-  headers?: Record<string, string>;
-}
-```
-
-**Storage:** `data/extensions.json`
-
-**API:**
-```typescript
-class ExtensionRegistry {
-  list(): Extension[]
-  get(id: string): Extension | undefined
-  create(ext: Omit<Extension, 'id' | 'createdAt' | 'updatedAt'>): Extension
-  update(id: string, ext: Partial<Extension>): Extension
-  delete(id: string): boolean
-  getEnabled(): Extension[]
-}
-```
-
 ---
 
 ## Phase 2: Dynamic Extension State
@@ -277,10 +220,6 @@ riglm/                            # Flattened monorepo (no server/ or client/ su
 │   │   ├── hosts.service.ts      # Modified in Phase 2
 │   │   └── backend.service.ts
 │   │
-│   ├── extension-manager/        # Phase 1.4 ✅
-│   │   ├── index.ts
-│   │   └── extension.registry.ts
-│   │
 │   ├── api/                      # Phase 3 (planned)
 │   │   └── websocket.controller.ts
 │   │
@@ -321,7 +260,7 @@ riglm/                            # Flattened monorepo (no server/ or client/ su
 - [x] `bun run typecheck` passes
 - [x] Server starts with `bun run dev`
 - [x] Can connect MCP client to endpoint
-- [x] 173 tests passing
+- [x] 110 tests passing
 
 ### After Phase 2
 - [ ] REST API returns extension list
@@ -370,7 +309,7 @@ riglm/                            # Flattened monorepo (no server/ or client/ su
 
 ## Risk Mitigation
 
-1. **Test suite** - ✅ Migrated to Bun's built-in test runner (173 tests passing)
+1. **Test suite** - ✅ Migrated to Bun's built-in test runner (110 tests passing)
 2. **MCP client compatibility** - Test with Claude Code, Cursor, Cline
 3. **WebSocket reliability** - Add reconnection logic in client
 4. **State sync** - Handle race conditions in toggle operations

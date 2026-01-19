@@ -12,12 +12,12 @@
  * Uses @modelcontextprotocol/sdk for MCP client/server communication.
  */
 
-import { RiglmServer, ServerDeps } from "../../src/server";
+import { RiglmServer, ServerDeps } from "../../src/application/riglm-server";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { dirname, join } from "path";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
+import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports/transport-factory.adapter";
 import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
 import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";

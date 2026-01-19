@@ -1,6 +1,4 @@
-/**
- * HTTP routes - HTTP adapter layer
- */
+
 import { Request, Response, Router } from "express";
 
 import { ApiError } from "../../domain/error";
@@ -19,10 +17,10 @@ export function makeHostsRoutes(
 
   hostsRoutes.param("endpointId", async (req, res, next, endpointId) => {
     try {
-      // Note: We don't pass an abort signal here because:
-      // - For SSE: the connection stays open and cleanup is handled in the route
-      // - For HTTP: each request is independent and doesn't own the service
-      // Individual transports manage their own session lifecycle
+      
+      
+      
+      
       const hostsService = await hostsServices.get(endpointId, {});
       if (!hostsService) {
         res.writeHead(404, { "Content-Type": "text/plain" });
@@ -86,7 +84,7 @@ export function makeHostsRoutes(
     await handleMessage(sessionId, req, res, logger);
   });
 
-  // Streamable HTTP transport route - handles all MCP communication over HTTP
+  
   hostsRoutes.all("/:endpointId/mcp", async (req, res): Promise<void> => {
     try {
       const request = req as EndpointRequest;
@@ -97,7 +95,7 @@ export function makeHostsRoutes(
 
       const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
-      // Existing session - route to it
+      
       if (sessionId) {
         if (!request.hostsService.hasSession(sessionId)) {
           res.status(404).json({ error: "Session not found" });
@@ -114,7 +112,7 @@ export function makeHostsRoutes(
         return;
       }
 
-      // New session - only POST allowed for initialization
+      
       if (req.method !== "POST") {
         res.status(400).json({ error: "New sessions require POST with initialize request" });
         return;
@@ -126,10 +124,10 @@ export function makeHostsRoutes(
       await transport.handleRequest(req, res, req.body);
       logger.info("HTTP session created:", { sessionId: transport.sessionId });
 
-      // Note: HTTP sessions persist across requests and are cleaned up by:
-      // - Inactivity timeout in TransportSessionManager
-      // - Explicit DELETE request (if implemented)
-      // Unlike SSE, we don't remove the session when the request ends
+      
+      
+      
+      
     } catch (error) {
       logger.error("Error handling MCP HTTP request:", error);
       if (!res.headersSent) {
@@ -160,9 +158,7 @@ type EndpointRequest = Request<{
   hostsService: HostsService;
 };
 
-/**
- * Type guard to check if a transport supports HTTP handleRequest
- */
+
 function isHttpServerTransport(transport: unknown): transport is HttpServerTransportPort {
   return (
     transport !== null &&
@@ -188,11 +184,11 @@ async function handleMessage(sessionId: unknown, req: Request, res: Response, lo
   }
 
   try {
-    // Check if transport supports handlePostMessage (SSE transport)
+    
     if ('handlePostMessage' in session.transport && typeof session.transport.handlePostMessage === 'function') {
       await (session.transport as SseServerTransportAdapter).handlePostMessage(req, res, req.body);
     } else {
-      // For non-SSE transports, return method not allowed
+      
       res.status(405).json({ error: "Method not allowed for this transport type" });
     }
   } catch (error) {

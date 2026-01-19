@@ -1,7 +1,4 @@
-/**
- * Config Service - CRUD operations for servers and endpoints
- * Manages the application configuration with persistence.
- */
+
 
 import { z } from "zod";
 import type { ConfiguratorPort } from "../ports/config-storage.port";
@@ -15,13 +12,13 @@ import {
   IdentifierSchema,
   FiltersSchema,
   isLocalServer,
-} from "../domain/types";
+} from "../domain/config-resolver";
 
-// ============================================================================
-// Input Schemas for API
-// ============================================================================
 
-/** Input for creating a local server */
+
+
+
+
 const CreateLocalServerInputSchema = z.object({
   id: IdentifierSchema,
   type: z.literal("local"),
@@ -32,7 +29,7 @@ const CreateLocalServerInputSchema = z.object({
   filters: FiltersSchema.optional(),
 });
 
-/** Input for creating a remote server */
+
 const CreateRemoteServerInputSchema = z.object({
   id: IdentifierSchema,
   type: z.literal("remote"),
@@ -42,13 +39,13 @@ const CreateRemoteServerInputSchema = z.object({
   filters: FiltersSchema.optional(),
 });
 
-/** Union of create server inputs */
+
 const CreateServerInputSchema = z.discriminatedUnion("type", [
   CreateLocalServerInputSchema,
   CreateRemoteServerInputSchema,
 ]);
 
-/** Input for updating a local server (no id, no type change) */
+
 const UpdateLocalServerInputSchema = z.object({
   command: z.string().min(1).optional(),
   args: z.array(z.string()).optional(),
@@ -57,7 +54,7 @@ const UpdateLocalServerInputSchema = z.object({
   filters: FiltersSchema.optional(),
 });
 
-/** Input for updating a remote server (no id, no type change) */
+
 const UpdateRemoteServerInputSchema = z.object({
   url: z.string().min(1).optional(),
   headers: z.record(z.string()).optional(),
@@ -65,7 +62,7 @@ const UpdateRemoteServerInputSchema = z.object({
   filters: FiltersSchema.optional(),
 });
 
-/** Input for creating an endpoint */
+
 const CreateEndpointInputSchema = z.object({
   id: IdentifierSchema,
   description: z.string().optional(),
@@ -73,23 +70,23 @@ const CreateEndpointInputSchema = z.object({
   filters: FiltersSchema.optional(),
 });
 
-/** Input for updating an endpoint (no id change) */
+
 const UpdateEndpointInputSchema = z.object({
   description: z.string().optional(),
   servers: z.array(z.string()).min(1, "Endpoint must have at least one server").optional(),
   filters: FiltersSchema.optional(),
 });
 
-/** Input for updating settings */
+
 const UpdateSettingsInputSchema = z.object({
   filters: FiltersSchema.optional(),
 });
 
-// Internal type aliases (inferred from schemas, used within this file)
+
 type CreateLocalServerInput = z.infer<typeof CreateLocalServerInputSchema>;
 type CreateRemoteServerInput = z.infer<typeof CreateRemoteServerInputSchema>;
 
-/** Server object with ID for API responses */
+
 export interface ServerWithId {
   id: string;
   type: "local" | "remote";
@@ -102,7 +99,7 @@ export interface ServerWithId {
   filters?: Filters;
 }
 
-/** Endpoint object with ID for API responses */
+
 export interface EndpointWithId {
   id: string;
   description?: string;
@@ -110,12 +107,12 @@ export interface EndpointWithId {
   filters?: Filters;
 }
 
-/** Settings object for API responses */
+
 export interface Settings {
   filters: Filters;
 }
 
-/** Status object for API responses */
+
 export interface Status {
   status: "ok";
   uptime: number;
@@ -123,16 +120,16 @@ export interface Status {
   memory: { rss: number; heapUsed: number };
 }
 
-/** Delete result with warning if server is in use */
+
 export interface DeleteResult {
   deleted: boolean;
   warning?: string;
   usedBy?: string[];
 }
 
-// ============================================================================
-// Service Dependencies
-// ============================================================================
+
+
+
 
 export interface ConfigServiceDeps {
   config: ConfiguratorPort;
@@ -140,14 +137,11 @@ export interface ConfigServiceDeps {
   getSessionCount?: (endpointId: string) => number;
 }
 
-// ============================================================================
-// ConfigService
-// ============================================================================
 
-/**
- * Service for managing configuration with CRUD operations.
- * Provides server and endpoint management with validation.
- */
+
+
+
+
 export class ConfigService {
   private startTime: number;
 
@@ -155,13 +149,11 @@ export class ConfigService {
     this.startTime = Date.now();
   }
 
-  // --------------------------------------------------------------------------
-  // Servers
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * List all servers with their IDs
-   */
+  
   listServers(): ServerWithId[] {
     const config = this.deps.config.get();
     return Object.entries(config.servers).map(([id, server]) =>
@@ -169,10 +161,7 @@ export class ConfigService {
     );
   }
 
-  /**
-   * Get a server by ID
-   * @throws ApiError 404 if not found
-   */
+  
   getServer(id: string): ServerWithId {
     const config = this.deps.config.get();
     const server = config.servers[id];
@@ -182,13 +171,9 @@ export class ConfigService {
     return this.toServerWithId(id, server);
   }
 
-  /**
-   * Create a new server
-   * @throws ApiError 409 if server already exists
-   * @throws ApiError 422 if validation fails
-   */
+  
   createServer(input: unknown): ServerWithId {
-    // Validate input
+    
     const parsed = CreateServerInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
@@ -201,12 +186,12 @@ export class ConfigService {
     const { id, type, ...rest } = parsed.data;
     const config = this.deps.config.get();
 
-    // Check for duplicate
+    
     if (config.servers[id]) {
       throw ApiError.conflict(`Server '${id}' already exists`, "DUPLICATE_ID");
     }
 
-    // Build server config based on type
+    
     let serverConfig: ServerConfig;
     if (type === "local") {
       const { command, args, env, description, filters } = rest as Omit<CreateLocalServerInput, "id" | "type">;
@@ -216,7 +201,7 @@ export class ConfigService {
       serverConfig = { url, headers, description, filters };
     }
 
-    // Update config
+    
     const newConfig: Config = {
       ...config,
       servers: {
@@ -231,11 +216,7 @@ export class ConfigService {
     return this.toServerWithId(id, serverConfig);
   }
 
-  /**
-   * Update an existing server
-   * @throws ApiError 404 if not found
-   * @throws ApiError 422 if validation fails
-   */
+  
   updateServer(id: string, input: unknown): ServerWithId {
     const config = this.deps.config.get();
     const existing = config.servers[id];
@@ -244,7 +225,7 @@ export class ConfigService {
       throw ApiError.notFound(`Server '${id}' not found`, "SERVER_NOT_FOUND");
     }
 
-    // Validate based on server type
+    
     const isLocal = isLocalServer(existing);
     const schema = isLocal ? UpdateLocalServerInputSchema : UpdateRemoteServerInputSchema;
     const parsed = schema.safeParse(input);
@@ -257,13 +238,13 @@ export class ConfigService {
       );
     }
 
-    // Merge with existing
+    
     const updated: ServerConfig = {
       ...existing,
       ...parsed.data,
     };
 
-    // Update config
+    
     const newConfig: Config = {
       ...config,
       servers: {
@@ -278,11 +259,7 @@ export class ConfigService {
     return this.toServerWithId(id, updated);
   }
 
-  /**
-   * Delete a server
-   * @returns Delete result with warning if server is used by endpoints
-   * @throws ApiError 404 if not found
-   */
+  
   deleteServer(id: string): DeleteResult {
     const config = this.deps.config.get();
 
@@ -290,18 +267,18 @@ export class ConfigService {
       throw ApiError.notFound(`Server '${id}' not found`, "SERVER_NOT_FOUND");
     }
 
-    // Check if server is used by any endpoints
+    
     const usedBy = Object.entries(config.endpoints)
       .filter(([_, endpoint]) => endpoint.servers.includes(id))
       .map(([endpointId]) => endpointId);
 
-    // Remove server from all endpoints that use it
+    
     const updatedEndpoints = { ...config.endpoints };
     for (const endpointId of usedBy) {
       const endpoint = updatedEndpoints[endpointId];
       const remainingServers = endpoint.servers.filter((s) => s !== id);
       if (remainingServers.length === 0) {
-        // Delete endpoint if no servers left
+        
         delete updatedEndpoints[endpointId];
       } else {
         updatedEndpoints[endpointId] = {
@@ -311,7 +288,7 @@ export class ConfigService {
       }
     }
 
-    // Remove server
+    
     const { [id]: _, ...remainingServers } = config.servers;
 
     const newConfig: Config = {
@@ -332,13 +309,11 @@ export class ConfigService {
     };
   }
 
-  // --------------------------------------------------------------------------
-  // Endpoints
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * List all endpoints with their IDs
-   */
+  
   listEndpoints(): EndpointWithId[] {
     const config = this.deps.config.get();
     return Object.entries(config.endpoints).map(([id, endpoint]) =>
@@ -346,10 +321,7 @@ export class ConfigService {
     );
   }
 
-  /**
-   * Get an endpoint by ID
-   * @throws ApiError 404 if not found
-   */
+  
   getEndpoint(id: string): EndpointWithId {
     const config = this.deps.config.get();
     const endpoint = config.endpoints[id];
@@ -359,13 +331,9 @@ export class ConfigService {
     return this.toEndpointWithId(id, endpoint);
   }
 
-  /**
-   * Create a new endpoint
-   * @throws ApiError 409 if endpoint already exists
-   * @throws ApiError 422 if validation fails or servers don't exist
-   */
+  
   createEndpoint(input: unknown): EndpointWithId {
-    // Validate input
+    
     const parsed = CreateEndpointInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
@@ -378,12 +346,12 @@ export class ConfigService {
     const { id, servers, description, filters } = parsed.data;
     const config = this.deps.config.get();
 
-    // Check for duplicate
+    
     if (config.endpoints[id]) {
       throw ApiError.conflict(`Endpoint '${id}' already exists`, "DUPLICATE_ID");
     }
 
-    // Validate all servers exist
+    
     const missingServers = servers.filter((s) => !config.servers[s]);
     if (missingServers.length > 0) {
       throw ApiError.validation(
@@ -393,14 +361,14 @@ export class ConfigService {
       );
     }
 
-    // Build endpoint config
+    
     const endpointConfig: EndpointConfig = {
       servers,
       description,
       filters,
     };
 
-    // Update config
+    
     const newConfig: Config = {
       ...config,
       endpoints: {
@@ -415,11 +383,7 @@ export class ConfigService {
     return this.toEndpointWithId(id, endpointConfig);
   }
 
-  /**
-   * Update an existing endpoint
-   * @throws ApiError 404 if not found
-   * @throws ApiError 422 if validation fails or servers don't exist
-   */
+  
   updateEndpoint(id: string, input: unknown): EndpointWithId {
     const config = this.deps.config.get();
     const existing = config.endpoints[id];
@@ -428,7 +392,7 @@ export class ConfigService {
       throw ApiError.notFound(`Endpoint '${id}' not found`, "ENDPOINT_NOT_FOUND");
     }
 
-    // Validate input
+    
     const parsed = UpdateEndpointInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
@@ -438,7 +402,7 @@ export class ConfigService {
       );
     }
 
-    // If servers are being updated, validate they exist
+    
     if (parsed.data.servers) {
       const missingServers = parsed.data.servers.filter((s) => !config.servers[s]);
       if (missingServers.length > 0) {
@@ -450,13 +414,13 @@ export class ConfigService {
       }
     }
 
-    // Merge with existing
+    
     const updated: EndpointConfig = {
       ...existing,
       ...parsed.data,
     };
 
-    // Update config
+    
     const newConfig: Config = {
       ...config,
       endpoints: {
@@ -471,11 +435,7 @@ export class ConfigService {
     return this.toEndpointWithId(id, updated);
   }
 
-  /**
-   * Delete an endpoint
-   * @returns Delete result with warning if endpoint has active sessions
-   * @throws ApiError 404 if not found
-   */
+  
   deleteEndpoint(id: string): DeleteResult {
     const config = this.deps.config.get();
 
@@ -483,10 +443,10 @@ export class ConfigService {
       throw ApiError.notFound(`Endpoint '${id}' not found`, "ENDPOINT_NOT_FOUND");
     }
 
-    // Check for active sessions
+    
     const sessionCount = this.deps.getSessionCount?.(id) ?? 0;
 
-    // Remove endpoint
+    
     const { [id]: _, ...remainingEndpoints } = config.endpoints;
 
     const newConfig: Config = {
@@ -505,13 +465,11 @@ export class ConfigService {
     };
   }
 
-  // --------------------------------------------------------------------------
-  // Settings
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * Get global settings
-   */
+  
   getSettings(): Settings {
     const config = this.deps.config.get();
     return {
@@ -519,12 +477,9 @@ export class ConfigService {
     };
   }
 
-  /**
-   * Update global settings
-   * @throws ApiError 422 if validation fails
-   */
+  
   updateSettings(input: unknown): Settings {
-    // Validate input
+    
     const parsed = UpdateSettingsInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
@@ -548,13 +503,11 @@ export class ConfigService {
     };
   }
 
-  // --------------------------------------------------------------------------
-  // Status
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * Get server status
-   */
+  
   getStatus(): Status {
     const config = this.deps.config.get();
     const endpoints: Status["endpoints"] = {};
@@ -578,14 +531,11 @@ export class ConfigService {
     };
   }
 
-  // --------------------------------------------------------------------------
-  // Config Reload
-  // --------------------------------------------------------------------------
+  
+  
+  
 
-  /**
-   * Reload configuration from file
-   * @returns true if reload successful
-   */
+  
   reloadConfig(): boolean {
     const success = this.deps.config.reload();
     if (success) {
@@ -594,9 +544,9 @@ export class ConfigService {
     return success;
   }
 
-  // --------------------------------------------------------------------------
-  // Private Helpers
-  // --------------------------------------------------------------------------
+  
+  
+  
 
   private toServerWithId(id: string, server: ServerConfig): ServerWithId {
     if (isLocalServer(server)) {
@@ -631,20 +581,18 @@ export class ConfigService {
   }
 }
 
-// ============================================================================
-// Factory
-// ============================================================================
 
-/**
- * Create a ConfigService instance
- */
+
+
+
+
 export function createConfigService(deps: ConfigServiceDeps): ConfigService {
   return new ConfigService(deps);
 }
 
-// ============================================================================
-// Schema Exports (for route validation)
-// ============================================================================
+
+
+
 
 export {
   CreateServerInputSchema,

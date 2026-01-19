@@ -1,14 +1,9 @@
-/**
- * SSE Client Transport Adapter - Wraps MCP SDK SSEClientTransport
- */
+
 
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { SdkTransportPort, SseTransportConfig } from "../../../ports/transport.port";
 
-/**
- * Adapter for SSE transport to remote MCP servers.
- * Wraps the MCP SDK SSEClientTransport class.
- */
+
 export class SseClientTransportAdapter implements SdkTransportPort {
   private transport: SSEClientTransport;
   private _sessionId: string;
@@ -34,7 +29,7 @@ export class SseClientTransportAdapter implements SdkTransportPort {
       },
     });
 
-    // Generate a session ID since SSEClientTransport doesn't have one until started
+    
     this._sessionId = `sse-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
@@ -66,9 +61,7 @@ export class SseClientTransportAdapter implements SdkTransportPort {
     return this.transport.onclose;
   }
 
-  /**
-   * Get the underlying SDK transport for direct SDK usage
-   */
+  
   getSdkTransport(): SSEClientTransport {
     return this.transport;
   }

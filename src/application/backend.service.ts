@@ -1,7 +1,4 @@
-/**
- * Backend Service - Application layer for MCP client connections
- * Uses ports for all external dependencies
- */
+
 
 import { setTimeout } from "node:timers/promises";
 import { McpClientPort, McpClientFactory } from "../ports/mcp-client.port";
@@ -13,19 +10,17 @@ import { ConfiguratorPort } from "../ports/config-storage.port";
 import { LoggerPort } from "../ports/logger.port";
 import {
   ServerConfig,
-  ToolDefinition,
   isLocalServer,
   isRemoteServer,
-} from "../domain/types";
+} from "../domain/config-resolver";
+import { ToolDefinition } from "../domain/tool-aggregator";
 import { makeServicesContainer, Services, ServiceOptions } from "../etc/service";
 
-// ============================================================================
-// Types
-// ============================================================================
 
-/**
- * A connected backend server with its tools
- */
+
+
+
+
 export interface BackendConnection {
   serverName: string;
   serverConfig: ServerConfig;
@@ -34,9 +29,7 @@ export interface BackendConnection {
   close: () => Promise<void>;
 }
 
-/**
- * Dependencies required by the backend service
- */
+
 export interface BackendServiceDeps {
   clientFactory: McpClientFactory;
   transportFactory: ClientTransportFactory;
@@ -44,21 +37,17 @@ export interface BackendServiceDeps {
   logger: LoggerPort;
 }
 
-/**
- * Factory function signature for creating session backends
- */
+
 export type SessionBackendsFactory = (
   sessionId: string,
   options?: ServiceOptions
 ) => Services<BackendConnection>;
 
-// ============================================================================
-// Factory Functions
-// ============================================================================
 
-/**
- * Create a factory for session backend connections
- */
+
+
+
+
 export function createSessionBackendFactory(
   deps: BackendServiceDeps
 ): SessionBackendsFactory {
@@ -69,9 +58,7 @@ export function createSessionBackendFactory(
     );
 }
 
-/**
- * Create a backend connector function for a specific session
- */
+
 function createBackendConnector(
   sessionId: string,
   deps: BackendServiceDeps,
@@ -83,7 +70,7 @@ function createBackendConnector(
     serverName: string,
     serviceOptions?: ServiceOptions
   ): Promise<BackendConnection> => {
-    // Combine signals if both are provided
+    
     const signal =
       serviceOptions?.signal && sessionOptions?.signal
         ? AbortSignal.any([serviceOptions.signal, sessionOptions.signal])
@@ -95,7 +82,7 @@ function createBackendConnector(
       throw new Error(`Server "${serverName}" not found in configuration`);
     }
 
-    // Create appropriate transport
+    
     const transport = createTransport(
       serverName,
       serverConfig,
@@ -104,7 +91,7 @@ function createBackendConnector(
       signal
     );
 
-    // Create and connect client
+    
     const client = clientFactory.create(`riglm-bridge-${sessionId}`, "0.0.1");
 
     try {
@@ -155,9 +142,7 @@ function createBackendConnector(
   };
 }
 
-/**
- * Create the appropriate transport for a server configuration
- */
+
 function createTransport(
   serverName: string,
   serverConfig: ServerConfig,
@@ -178,7 +163,7 @@ function createTransport(
   }
 
   if (isRemoteServer(serverConfig)) {
-    // Check if URL ends with /sse for backward compatibility
+    
     const isSSE = serverConfig.url.endsWith("/sse");
     logger.info(
       `${isSSE ? "SSE" : "HTTP"} transport: url=${serverConfig.url}`
@@ -199,16 +184,14 @@ function createTransport(
     });
   }
 
-  // TypeScript exhaustiveness check
+  
   serverConfig satisfies never;
   throw new Error(
     `Unhandled server config type: ${JSON.stringify(serverConfig)}`
   );
 }
 
-/**
- * Connect to server with retry logic
- */
+
 async function connectWithRetry(
   client: McpClientPort,
   transport: TransportPort,
@@ -221,10 +204,10 @@ async function connectWithRetry(
 
   while (retries > 0) {
     try {
-      // Create timeout signal
+      
       const timeoutSignal = AbortSignal.timeout(10000);
 
-      // Combine with existing signal if present
+      
       const connectionSignal = signal
         ? AbortSignal.any([signal, timeoutSignal])
         : timeoutSignal;
@@ -246,15 +229,13 @@ async function connectWithRetry(
         `Failed to connect to ${serverName}, retrying... (${retries} attempts left)`
       );
 
-      // Wait before retry
+      
       await waitWithSignal(1000, signal);
     }
   }
 }
 
-/**
- * Wait for a duration, respecting abort signal
- */
+
 async function waitWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
   if (signal?.aborted) {
     throw new Error("Wait aborted by signal");

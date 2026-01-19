@@ -98,7 +98,7 @@ Each phase follows:
 ### 0.1 Verify Existing Test Coverage
 
 ```bash
-bun test                    # All 173 tests pass
+bun test                    # All 110 tests pass
 bun run typecheck           # No type errors
 bun run lint                # No lint errors
 ```
@@ -951,7 +951,7 @@ GREEN phase - mock server for testing HTTP backend connections"
 bun test
 ```
 
-**Expected**: All 173+ tests pass including new ones.
+**Expected**: All 110+ tests pass including new ones.
 
 ### 7.2 Add Explicit Compat Test
 

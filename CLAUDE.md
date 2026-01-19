@@ -15,7 +15,6 @@ A unified platform where users define their LLM extensions (MCP servers, knowled
 - [X] Dead code removal - removed unused RPC endpoint
 - [X] Migrated to Bun runtime (faster startup, native TypeScript, built-in test runner)
 - [X] Architecture refactor - hexagonal/ports-adapters pattern
-- [X] Extension registry - file-based CRUD for extensions (Zod validation)
 - [X] Repository flattened - merged server/ into root
 
 **Upcoming:** Phase 2 (Dynamic State), Phase 3 (WebSocket), Phase 4 (Client Redesign)
@@ -89,7 +88,7 @@ The web UI is a vanilla HTML/CSS/JS single-page application in `public/`. It is 
 
 ## Testing
 
-173 tests using Bun's built-in test runner:
+110 tests using Bun's built-in test runner:
 
 ```bash
 bun test                       # Run all tests
@@ -99,8 +98,6 @@ bun test test/filter.test.ts   # Run specific test file
 Test structure:
 
 - `test/filter.test.ts` - Unit tests for filter engine
-- `test/extension.test.ts` - Extension domain types and Zod validation
-- `test/extension-registry.test.ts` - ExtensionRegistry CRUD operations
 - `test/e2e/*.test.ts` - E2E tests (happy-flow, filtering, error handling, streams, resources)
 - `test/fixtures/` - Mock MCP servers for testing
 - `test/mocks/` - Mock config and logger

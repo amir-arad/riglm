@@ -1,16 +1,11 @@
-/**
- * Init Command
- *
- * Creates a new configuration file from a template.
- * @see docs/cli-design.md for specification
- */
+
 
 import { existsSync, mkdirSync, writeFileSync } from "fs";
 import type { InitOptions, TemplateName } from "../config/args.schema";
 import { getDefaultConfigLocation } from "../config/config-locator";
 import { ExitCode, exit } from "../output/exit-codes";
 
-// Templates (embedded as TypeScript for standalone build compatibility)
+
 import {
   MINIMAL_CONFIG,
   MINIMAL_EXTENSIONS,
@@ -20,18 +15,18 @@ import {
   FULL_EXTENSIONS,
 } from "../templates";
 
-// ============================================================================
-// Types
-// ============================================================================
+
+
+
 
 interface Template {
   config: string;
   extensions: string;
 }
 
-// ============================================================================
-// Template Selection
-// ============================================================================
+
+
+
 
 const TEMPLATES: Record<TemplateName, Template> = {
   minimal: { config: MINIMAL_CONFIG, extensions: MINIMAL_EXTENSIONS },
@@ -39,22 +34,18 @@ const TEMPLATES: Record<TemplateName, Template> = {
   full: { config: FULL_CONFIG, extensions: FULL_EXTENSIONS },
 };
 
-// ============================================================================
-// File Operations
-// ============================================================================
 
-/**
- * Ensure directory exists, creating parent directories as needed
- */
+
+
+
+
 function ensureDirectory(dir: string): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
 }
 
-/**
- * Write a file, checking for existing files if force is not set
- */
+
 function writeFile(
   path: string,
   content: string,
@@ -68,13 +59,11 @@ function writeFile(
   return { written: true };
 }
 
-// ============================================================================
-// Command Implementation
-// ============================================================================
 
-/**
- * Execute the init command
- */
+
+
+
+
 export async function initCommand(options: InitOptions): Promise<void> {
   const templateName: TemplateName = options.template ?? "minimal";
   const template = TEMPLATES[templateName];
@@ -85,7 +74,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     exit(ExitCode.RUNTIME_ERROR);
   }
 
-  // Determine output location
+  
   const location = getDefaultConfigLocation(
     options.local ?? false,
     options.path
@@ -96,7 +85,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
   console.log(`  Location:  ${location.directory}`);
   console.log("");
 
-  // Ensure directory exists
+  
   try {
     ensureDirectory(location.directory);
   } catch (error) {
@@ -105,7 +94,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     exit(ExitCode.RUNTIME_ERROR);
   }
 
-  // Write config file
+  
   const configResult = writeFile(
     location.configPath,
     template.config,
@@ -121,7 +110,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
     }
   }
 
-  // Write extensions file
+  
   const extensionsResult = writeFile(
     location.extensionsPath,
     template.extensions,
@@ -136,7 +125,7 @@ export async function initCommand(options: InitOptions): Promise<void> {
 
   console.log("");
 
-  // Summary
+  
   if (configResult.written || extensionsResult.written) {
     console.log("Configuration initialized successfully!");
     console.log("");

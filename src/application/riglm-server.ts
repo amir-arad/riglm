@@ -1,44 +1,41 @@
-/**
- * RiglmServer - Express server with MCP aggregation
- */
+
 
 import express from "express";
 import helmet from "helmet";
 import { Server } from "http";
 import morgan from "morgan";
 import { join } from "path";
-import { ConfiguratorPort } from "./ports/config-storage.port";
-import { LoggerPort } from "./ports/logger.port";
-import { McpClientFactory } from "./ports/mcp-client.port";
-import { McpServerFactory } from "./ports/mcp-server.port";
-import { ClientTransportFactory, ServerTransportFactory } from "./ports/transport.port";
-import { errorHandler, notFoundHandler, makeManagementRoutes } from "./adapters/http";
-import { ServerTransportFactoryAdapter } from "./adapters/mcp/transports";
-import { Services } from "./etc/service";
-import { makeHostsRoutes } from "./adapters/http/routes";
-import { ConfigService, createConfigService } from "./application/config.service";
+import { ConfiguratorPort } from "../ports/config-storage.port";
+import { LoggerPort } from "../ports/logger.port";
+import { McpClientFactory } from "../ports/mcp-client.port";
+import { McpServerFactory } from "../ports/mcp-server.port";
+import { ClientTransportFactory, ServerTransportFactory } from "../ports/transport.port";
+import { errorHandler, notFoundHandler } from "../adapters/http/error.middleware";
+import { makeManagementRoutes } from "../adapters/http/management.routes";
+import { ServerTransportFactoryAdapter } from "../adapters/mcp/transports/transport-factory.adapter";
+import { Services } from "../etc/service";
+import { makeHostsRoutes } from "../adapters/http/routes";
+import { ConfigService, createConfigService } from "./config.service";
 import {
   createSessionBackendFactory,
   SessionBackendsFactory,
-} from "./application/backend.service";
+} from "./backend.service";
 import {
   createHostsServiceFactory,
   HostsService,
-} from "./application/hosts.service";
+} from "./hosts.service";
 import {
   isStandaloneMode,
   loadEmbeddedAssets,
   createEmbeddedAssetsMiddleware,
   EmbeddedAssetsMap,
-} from "./embedded-assets";
+} from "../embedded-assets";
 
-// ============================================================================
-// Types
-// ============================================================================
 
-/**
- * Server dependencies using ports
- */
+
+
+
+
 export interface ServerDeps {
   config: ConfiguratorPort;
   clientFactory: McpClientFactory;
@@ -55,9 +52,9 @@ export interface ServerDeps {
 }
 
 
-// ============================================================================
-// Server Class
-// ============================================================================
+
+
+
 
 export class RiglmServer {
   private httpServer: Server | null = null;
@@ -71,7 +68,7 @@ export class RiglmServer {
   async start() {
     const { config, clientFactory, serverFactory, transportFactory, logger, env } = this.deps;
 
-    // Create session backends factory
+    
     this.sessionBackends = createSessionBackendFactory({
       clientFactory,
       transportFactory,
@@ -79,7 +76,7 @@ export class RiglmServer {
       logger,
     });
 
-    // Create hosts services factory
+    
     this.hostsServices = createHostsServiceFactory({
       serverFactory,
       config,
@@ -87,23 +84,23 @@ export class RiglmServer {
       sessionBackends: this.sessionBackends,
     });
 
-    // Create config service for management API
-    // Note: Session count is not available synchronously from hostsServices
-    // as it requires async lookup. For now, return 0 (can be enhanced later).
+    
+    
+    
     this.configService = createConfigService({
       config,
       logger,
     });
 
-    // Set up Express app
+    
     const app = express();
-    // Configure Helmet with CSP that allows inline scripts (safe for local desktop app)
+    
     app.use(helmet({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrcAttr: ["'unsafe-inline'"], // Allow inline event handlers (onclick, onsubmit)
+          scriptSrcAttr: ["'unsafe-inline'"], 
           styleSrc: ["'self'", "'unsafe-inline'"],
         },
       },
@@ -120,12 +117,12 @@ export class RiglmServer {
       })
     );
 
-    // Feature flags with defaults for backward compatibility
+    
     const enableUi = env.enableUi ?? true;
     const enableApi = env.enableApi ?? true;
 
-    // Static file serving for frontend (public/)
-    // In standalone mode, serve from embedded assets; otherwise use filesystem
+    
+    
     if (enableUi) {
       const standalone = isStandaloneMode();
       if (standalone) {
@@ -135,7 +132,7 @@ export class RiglmServer {
         });
         app.use(createEmbeddedAssetsMiddleware(embeddedAssets) as express.RequestHandler);
       } else {
-        const clientPath = join(__dirname, "../public");
+        const clientPath = join(__dirname, "../../public");
         logger.debug("Serving static files from filesystem", { clientPath });
         app.use(express.static(clientPath));
       }
@@ -143,20 +140,20 @@ export class RiglmServer {
       logger.info("Web UI disabled");
     }
 
-    // Management API routes
+    
     if (enableApi) {
       app.use("/api", makeManagementRoutes(this.configService, logger));
     } else {
       logger.info("Management API disabled");
     }
 
-    // MCP host routes
+    
     const serverTransportFactory: ServerTransportFactory = new ServerTransportFactoryAdapter();
     app.use(makeHostsRoutes(this.hostsServices, serverTransportFactory, logger));
     app.use(notFoundHandler);
     app.use(errorHandler(env.isProduction, logger));
 
-    // Start HTTP server
+    
     this.port = await new Promise<number>((resolve, reject) => {
       const { port, host = "0.0.0.0" } = env;
       this.httpServer = app.listen(port, host, () => {

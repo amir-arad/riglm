@@ -1,13 +1,8 @@
-/**
- * Configuration Templates
- *
- * Template content for the `init` command.
- * @see docs/cli-design.md for specification
- */
 
-// ============================================================================
-// Minimal Template
-// ============================================================================
+
+
+
+
 
 export const MINIMAL_CONFIG = `{
   // Riglm Configuration
@@ -38,9 +33,9 @@ export const MINIMAL_EXTENSIONS = `{
 }
 `;
 
-// ============================================================================
-// Standard Template
-// ============================================================================
+
+
+
 
 export const STANDARD_CONFIG = `{
   // Riglm Configuration
@@ -79,9 +74,9 @@ export const STANDARD_EXTENSIONS = `{
 }
 `;
 
-// ============================================================================
-// Full Template
-// ============================================================================
+
+
+
 
 export const FULL_CONFIG = `{
   // ==========================================================================

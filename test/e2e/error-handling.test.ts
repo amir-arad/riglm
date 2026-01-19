@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { setTimeout } from "timers/promises";
-import { TransportSessionManager } from "../../src/host-gateway/transport-session-manager";
+import { TransportSessionManager } from "../../src/application/transport-session-manager";
 import { TransportPort } from "../../src/ports/transport.port";
 import { createSilentLogger } from "../mocks/mock-logger";
 

@@ -1,6 +1,4 @@
-/**
- * MCP Server Adapter - Wraps MCP SDK Server
- */
+
 
 import {
   CallToolHandlerRequest,
@@ -21,13 +19,10 @@ import { SdkTransportPort, TransportPort } from "../../ports/transport.port";
 
 import { Infer } from "zod/v4";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ToolResponse } from "../../domain/types";
+import { ToolResponse } from "../../domain/tool-aggregator";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
-/**
- * Adapter for MCP Server.
- * Wraps the MCP SDK Server class.
- */
+
 export class McpServerAdapter implements McpServerPort {
   private server: Server;
 
@@ -60,7 +55,7 @@ export class McpServerAdapter implements McpServerPort {
           throw new McpError(ErrorCode.InvalidRequest, "Session ID is required");
         }
         const result = await handler({ signal, sessionId });
-        // Return SDK-compatible format
+        
         return { tools: result.tools };
       }
     );
@@ -99,9 +94,7 @@ export class McpServerAdapter implements McpServerPort {
     await this.server.close();
   }
 
-  /**
-   * Extract SDK transport from our adapter
-   */
+  
   private getSdkTransport(transport: TransportPort): unknown {
     if ("getSdkTransport" in transport) {
       return (transport as SdkTransportPort).getSdkTransport();
@@ -109,9 +102,7 @@ export class McpServerAdapter implements McpServerPort {
     return transport;
   }
 
-  /**
-   * Check if request was cancelled
-   */
+  
   private checkSignal(signal: AbortSignal): void {
     if (signal.aborted) {
       throw new McpError(
@@ -122,9 +113,7 @@ export class McpServerAdapter implements McpServerPort {
   }
 }
 
-/**
- * Factory for creating MCP server instances
- */
+
 export class McpServerFactoryAdapter implements McpServerFactory {
   create(config: McpServerConfig): McpServerPort {
     return new McpServerAdapter(config);

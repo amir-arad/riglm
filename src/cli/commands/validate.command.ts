@@ -1,21 +1,11 @@
-/**
- * Validate Command
- *
- * Validates configuration files without starting the server.
- * @see docs/cli-design.md for specification
- */
+
 
 import { existsSync, readFileSync } from "fs";
 import JSON5 from "json5";
 import type { ValidateOptions } from "../config/args.schema";
 import { findConfig, getConfigLocation } from "../config/config-locator";
 import { ExitCode, exit } from "../output/exit-codes";
-import { ValidatedConfigSchema } from "../../domain/config-resolver";
-import type { Config } from "../../domain/types";
-
-// ============================================================================
-// Types
-// ============================================================================
+import { ValidatedConfigSchema, type Config } from "../../domain/config-resolver";
 
 interface ValidationResult {
   valid: boolean;
@@ -36,21 +26,15 @@ interface ValidationWarning {
   code: string;
 }
 
-// ============================================================================
-// Validation Logic
-// ============================================================================
 
-/**
- * Check for common warnings in the configuration
- */
 function checkWarnings(config: Config): ValidationWarning[] {
   const warnings: ValidationWarning[] = [];
 
-  // Check for environment variable references that might be missing
+
   for (const [serverName, server] of Object.entries(config.servers)) {
     if ("env" in server && server.env) {
       for (const [key, value] of Object.entries(server.env)) {
-        // Check for ${VAR} patterns that might not be resolved
+
         if (typeof value === "string" && value.startsWith("${") && value.endsWith("}")) {
           const varName = value.slice(2, -1);
           if (!process.env[varName]) {
@@ -65,7 +49,7 @@ function checkWarnings(config: Config): ValidationWarning[] {
     }
   }
 
-  // Check for empty endpoints
+
   for (const [endpointName, endpoint] of Object.entries(config.endpoints)) {
     if (endpoint.servers.length === 0) {
       warnings.push({
@@ -79,9 +63,7 @@ function checkWarnings(config: Config): ValidationWarning[] {
   return warnings;
 }
 
-/**
- * Parse and validate a configuration file
- */
+
 function validateConfigFile(configPath: string): ValidationResult {
   const result: ValidationResult = {
     valid: false,
@@ -90,7 +72,7 @@ function validateConfigFile(configPath: string): ValidationResult {
     warnings: [],
   };
 
-  // Check if file exists
+
   if (!existsSync(configPath)) {
     result.errors.push({
       path: configPath,
@@ -99,7 +81,7 @@ function validateConfigFile(configPath: string): ValidationResult {
     return result;
   }
 
-  // Read and parse the file
+
   let rawConfig: unknown;
   try {
     const content = readFileSync(configPath, "utf-8");
@@ -112,7 +94,7 @@ function validateConfigFile(configPath: string): ValidationResult {
     return result;
   }
 
-  // Validate with Zod schema
+
   const parseResult = ValidatedConfigSchema.safeParse(rawConfig);
   if (!parseResult.success) {
     for (const issue of parseResult.error.issues) {
@@ -124,7 +106,7 @@ function validateConfigFile(configPath: string): ValidationResult {
     return result;
   }
 
-  // Config is valid
+
   result.valid = true;
   result.config = parseResult.data;
   result.warnings = checkWarnings(parseResult.data);
@@ -132,13 +114,11 @@ function validateConfigFile(configPath: string): ValidationResult {
   return result;
 }
 
-// ============================================================================
-// Output Formatting
-// ============================================================================
 
-/**
- * Format validation result as text
- */
+
+
+
+
 function formatText(result: ValidationResult): string {
   const lines: string[] = [];
 
@@ -171,9 +151,7 @@ function formatText(result: ValidationResult): string {
   return lines.join("\n");
 }
 
-/**
- * Format validation result as JSON
- */
+
 function formatJson(result: ValidationResult): string {
   return JSON.stringify(
     {
@@ -189,17 +167,15 @@ function formatJson(result: ValidationResult): string {
   );
 }
 
-// ============================================================================
-// Command Implementation
-// ============================================================================
 
-/**
- * Execute the validate command
- */
+
+
+
+
 export async function validateCommand(options: ValidateOptions): Promise<void> {
   const format = options.format ?? "text";
 
-  // Determine config path
+
   let configPath: string | null = null;
 
   if (options.config) {
@@ -212,7 +188,7 @@ export async function validateCommand(options: ValidateOptions): Promise<void> {
     }
   }
 
-  // Check if config was found
+
   if (!configPath) {
     if (format === "json") {
       console.log(
@@ -239,17 +215,17 @@ export async function validateCommand(options: ValidateOptions): Promise<void> {
     exit(ExitCode.CONFIG_NOT_FOUND);
   }
 
-  // Validate the config
+
   const result = validateConfigFile(configPath);
 
-  // Output result
+
   if (format === "json") {
     console.log(formatJson(result));
   } else {
     console.log(formatText(result));
   }
 
-  // Determine exit code
+
   if (!result.valid) {
     exit(ExitCode.INVALID_CONFIG);
   }

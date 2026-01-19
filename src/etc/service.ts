@@ -1,25 +1,15 @@
 import type { LoggerPort } from "../ports/logger.port";
 
-/**
- * Options for service creation and management
- */
+
 export interface ServiceOptions {
   logger?: LoggerPort;
-  /**
-   * Optional AbortSignal for controlling service lifecycle
-   */
+  
   signal?: AbortSignal;
 }
 
-/**
- * A generic service interface
- */
+
 export type Service = {
-  /**
-   * A method to close the service
-   * @param this should never be used, the function MUST be pre-bound to the service
-   * @returns A promise that resolves when the service is closed
-   */
+  
   close: (this: unknown) => Promise<unknown>;
 };
 
@@ -47,7 +37,7 @@ export function makeServicesContainer<T extends Service>(
   return {
     get: (id: string, options?: ServiceOptions) => {
       if (!services.has(id)) {
-        // Check if signal is already aborted
+        
         if (options?.signal?.aborted) {
           return Promise.reject(new Error("AbortSignal is already aborted"));
         }
@@ -61,7 +51,7 @@ export function makeServicesContainer<T extends Service>(
             return orig_close();
           };
 
-          // Handle abort signal
+          
           if (options?.signal) {
             options.signal.addEventListener(
               "abort",
@@ -94,11 +84,7 @@ export function makeServicesContainer<T extends Service>(
   };
 }
 
-/**
- * A container for creating, retreiving and closing services of type `T`.
- *
- * @template T - The type of the service.
- **/
+
 export type Services<T extends Service> = ReturnType<
   typeof makeServicesContainer<T>
 >;

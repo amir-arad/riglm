@@ -60,7 +60,7 @@ export class TransportSessionManager {
       ["transport", Promise.resolve(transport)],
     ]);
 
-    // Handle abort signal
+    
     if (options?.signal) {
       options.signal.addEventListener(
         "abort",
@@ -228,9 +228,7 @@ export class TransportSessionManager {
     }
   }
 
-  /**
-   * Closes the session manager and all active sessions
-   */
+  
   async close(): Promise<void> {
     await this.cleanup();
   }
