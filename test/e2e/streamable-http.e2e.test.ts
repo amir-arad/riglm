@@ -195,7 +195,7 @@ describe("Streamable HTTP Transport E2E", () => {
     });
 
     expect(toolsResponse.ok).toBe(true);
-    const result = await toolsResponse.json();
+    const result = (await toolsResponse.json()) as { result: { tools: unknown[] } };
     expect(result.result.tools).toBeDefined();
   });
 
