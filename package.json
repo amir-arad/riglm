@@ -1,6 +1,6 @@
 {
   "name": "riglm",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "type": "module",
   "description": "MCP router for AI Extension Manager",
   "main": "dist/index.js",
