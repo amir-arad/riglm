@@ -114,7 +114,7 @@ This is how we bring it all together. This header immediately establishes the "c
 
 # The Intelligent Context Router for AI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-0A0E17.svg?style=flat-square&labelColor=161B22&color=8B949E)](https://opensource.org/licenses/MIT)
+[![License: ISC](https://img.shields.io/badge/License-ISC-0A0E17.svg?style=flat-square&labelColor=161B22&color=8B949E)](https://opensource.org/licenses/ISC)
 [![MCP Ready](https://img.shields.io/badge/MCP-Ready-0A0E17.svg?style=flat-square&labelColor=161B22&color=00F0FF)]()
 [![Status: Active](https://img.shields.io/badge/Status-Active-0A0E17.svg?style=flat-square&labelColor=161B22&color=22C55E)]()
 

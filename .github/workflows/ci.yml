@@ -30,7 +30,9 @@ jobs:
         run: bun run lint
 
       - name: Dead code check
-        run: bun run deadcode
+        run: |
+          mkdir -p dist && touch dist/index.js
+          bun run deadcode
 
       - name: Circular dependency check
         run: bun run circular

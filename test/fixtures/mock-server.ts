@@ -13,13 +13,9 @@ export function makeMockServer(
     version: "1.0.0",
   });
 
-  server.tool("echo", { message: z.string() }, async ({ message }) => ({
-    content: [{ type: "text", text: message }],
-  }));
+  server.registerTool("echo", { description: "Echo a message back", inputSchema: { message: z.string() } }, async ({ message }: { message: string }) => ({ content: [{ type: "text" as const, text: message }] }));
 
-  server.tool("add", { a: z.number(), b: z.number() }, async ({ a, b }) => ({
-    content: [{ type: "text", text: String(a + b) }],
-  }));
+  server.registerTool("add", { description: "Add two numbers", inputSchema: { a: z.number(), b: z.number() } }, async ({ a, b }: { a: number; b: number }) => ({ content: [{ type: "text" as const, text: String(a + b) }] }));
 
   return server;
 }

@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { FilterEngine } from "../src/domain/filter-engine";
-import { Filters } from "../src/domain/types";
+import { Filters } from "../src/domain/config-resolver";
 
 describe("FilterEngine", () => {
   describe("shouldFilter", () => {

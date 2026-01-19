@@ -5,17 +5,18 @@
  * They will fail until the implementation is complete.
  */
 
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { RiglmServer, ServerDeps } from "../../src/application/riglm-server";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { setTimeout } from "node:timers/promises";
-import winston from "winston";
-import { RiglmServer, ServerDeps } from "../../src/server";
-import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
-import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
-import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
+import { clientTransportFactory, createServerTransportAdapter } from "../../src/adapters/mcp/transports/transport-factory.adapter";
+import { createMcpClientAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
+import { createMcpServerAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
 import { createMockConfigStorage } from "../mocks/mock-config";
 import { mocSseServer } from "../fixtures/mock-sse-server";
+import { setTimeout } from "node:timers/promises";
+import winston from "winston";
 
 describe("Streamable HTTP Transport E2E", () => {
   let mockBackend: ReturnType<typeof mocSseServer> | null = null;
@@ -46,9 +47,9 @@ describe("Streamable HTTP Transport E2E", () => {
     child: (_meta: Record<string, unknown>) => logger,
   };
 
-  const clientFactory = new McpClientFactoryAdapter();
-  const serverFactory = new McpServerFactoryAdapter();
-  const transportFactory = new ClientTransportFactoryAdapter();
+  const clientFactory = createMcpClientAdapter;
+  const serverFactory = createMcpServerAdapter;
+  const transportFactory = clientTransportFactory;
 
   const TEST_PORT = 56667;
 
@@ -61,7 +62,8 @@ describe("Streamable HTTP Transport E2E", () => {
       config,
       clientFactory,
       serverFactory,
-      transportFactory,
+      clientTransportFactory: transportFactory,
+      serverTransportFactory: createServerTransportAdapter,
       logger,
     };
   }

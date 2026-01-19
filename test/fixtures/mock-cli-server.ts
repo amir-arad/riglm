@@ -1,9 +1,9 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { makeMockServer } from "./mock-server";
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-let server: McpServer | null = null;
+let server: Server | null = null;
 let transport: StdioServerTransport | null = null;
 
 async function cleanup() {

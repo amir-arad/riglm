@@ -9,11 +9,12 @@
  * - POST /api/config/reload
  */
 
-import { RiglmServer, ServerDeps } from "../../src/server";
+import { RiglmServer, ServerDeps } from "../../src/application/riglm-server";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
-import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
-import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports";
+
+import { clientTransportFactory, createServerTransportAdapter } from "../../src/adapters/mcp/transports/transport-factory.adapter";
+import { createMcpClientAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
+import { createMcpServerAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
 import { createMockConfigStorage } from "../mocks/mock-config";
 import { createSilentLogger } from "../mocks/mock-logger";
 
@@ -24,9 +25,9 @@ describe("Management API E2E", () => {
   const port = 56680;
 
   const logger = createSilentLogger();
-  const clientFactory = new McpClientFactoryAdapter();
-  const serverFactory = new McpServerFactoryAdapter();
-  const transportFactory = new ClientTransportFactoryAdapter();
+  const clientFactory = createMcpClientAdapter;
+  const serverFactory = createMcpServerAdapter;
+  const transportFactory = clientTransportFactory;
 
   function createServerDeps(): ServerDeps {
     return {
@@ -34,7 +35,8 @@ describe("Management API E2E", () => {
       config: mockConfig!,
       clientFactory,
       serverFactory,
-      transportFactory,
+      clientTransportFactory: transportFactory,
+      serverTransportFactory: createServerTransportAdapter,
       logger,
     };
   }

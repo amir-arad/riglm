@@ -1,12 +1,7 @@
-/**
- * MCP Server Adapter - Wraps MCP SDK Server
- */
-
 import {
   CallToolHandlerRequest,
   ListToolsResponse,
   McpServerConfig,
-  McpServerFactory,
   McpServerPort,
   RequestContext,
 } from "../../ports/mcp-server.port";
@@ -21,112 +16,97 @@ import { SdkTransportPort, TransportPort } from "../../ports/transport.port";
 
 import { Infer } from "zod/v4";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ToolResponse } from "../../domain/types";
+import { ToolResponse } from "../../domain/tool-aggregator";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 
-/**
- * Adapter for MCP Server.
- * Wraps the MCP SDK Server class.
- */
-export class McpServerAdapter implements McpServerPort {
-  private server: Server;
+function getSdkTransport(transport: TransportPort): unknown {
+  if ("getSdkTransport" in transport) {
+    return (transport as SdkTransportPort).getSdkTransport();
+  }
+  return transport;
+}
 
-  constructor(config: McpServerConfig) {
-    this.server = new Server(
-      {
-        name: config.name,
-        description: config.description,
-        version: config.version,
-      },
-      {
-        capabilities: config.capabilities,
-      }
+function checkSignal(signal: AbortSignal): void {
+  if (signal.aborted) {
+    throw new McpError(
+      ErrorCode.ConnectionClosed,
+      "Request was cancelled by the client",
     );
-  }
-
-  async connect(transport: TransportPort): Promise<void> {
-    const sdkTransport = this.getSdkTransport(transport);
-    await this.server.connect(sdkTransport as Transport);
-  }
-
-  setListToolsHandler(
-    handler: (context: RequestContext) => Promise<ListToolsResponse>
-  ): void {
-    this.server.setRequestHandler(
-      ListToolsRequestSchema,
-      async (_, { signal, sessionId }) => {
-        this.checkSignal(signal);
-        if (!sessionId) {
-          throw new McpError(ErrorCode.InvalidRequest, "Session ID is required");
-        }
-        const result = await handler({ signal, sessionId });
-        // Return SDK-compatible format
-        return { tools: result.tools };
-      }
-    );
-  }
-
-  setCallToolHandler(
-    handler: (
-      request: CallToolHandlerRequest,
-      context: RequestContext
-    ) => Promise<ToolResponse>
-  ): void {
-    this.server.setRequestHandler(
-      CallToolRequestSchema,
-      async (request, { signal, sessionId }) => {
-        this.checkSignal(signal);
-        if (!sessionId) {
-          throw new McpError(ErrorCode.InvalidRequest, "Session ID is required");
-        }
-        const result = await handler(
-          {
-            name: request.params.name,
-            arguments: request.params.arguments,
-          },
-          { signal, sessionId }
-        ) as Infer<typeof CallToolResultSchema>;
-        return result;
-      }
-    );
-  }
-
-  setErrorHandler(handler: (error: Error) => void): void {
-    this.server.onerror = handler;
-  }
-
-  async close(): Promise<void> {
-    await this.server.close();
-  }
-
-  /**
-   * Extract SDK transport from our adapter
-   */
-  private getSdkTransport(transport: TransportPort): unknown {
-    if ("getSdkTransport" in transport) {
-      return (transport as SdkTransportPort).getSdkTransport();
-    }
-    return transport;
-  }
-
-  /**
-   * Check if request was cancelled
-   */
-  private checkSignal(signal: AbortSignal): void {
-    if (signal.aborted) {
-      throw new McpError(
-        ErrorCode.ConnectionClosed,
-        "Request was cancelled by the client"
-      );
-    }
   }
 }
 
-/**
- * Factory for creating MCP server instances
- */
-export class McpServerFactoryAdapter implements McpServerFactory {
-  create(config: McpServerConfig): McpServerPort {
-    return new McpServerAdapter(config);
-  }
+export function createMcpServerAdapter(config: McpServerConfig): McpServerPort {
+  const server = new Server(
+    {
+      name: config.name,
+      description: config.description,
+      version: config.version,
+    },
+    {
+      capabilities: config.capabilities,
+    },
+  );
+
+  return {
+    async connect(transport: TransportPort): Promise<void> {
+      const sdkTransport = getSdkTransport(transport);
+      await server.connect(sdkTransport as Transport);
+    },
+
+    setListToolsHandler(
+      handler: (context: RequestContext) => Promise<ListToolsResponse>,
+    ): void {
+      server.setRequestHandler(
+        ListToolsRequestSchema,
+        async (_, { signal, sessionId }) => {
+          checkSignal(signal);
+          if (!sessionId) {
+            throw new McpError(
+              ErrorCode.InvalidRequest,
+              "Session ID is required",
+            );
+          }
+          const result = await handler({ signal, sessionId });
+
+          return { tools: result.tools };
+        },
+      );
+    },
+
+    setCallToolHandler(
+      handler: (
+        request: CallToolHandlerRequest,
+        context: RequestContext,
+      ) => Promise<ToolResponse>,
+    ): void {
+      server.setRequestHandler(
+        CallToolRequestSchema,
+        async (request, { signal, sessionId }) => {
+          checkSignal(signal);
+          if (!sessionId) {
+            throw new McpError(
+              ErrorCode.InvalidRequest,
+              "Session ID is required",
+            );
+          }
+          const result = (await handler(
+            {
+              name: request.params.name,
+              arguments: request.params.arguments,
+            },
+            { signal, sessionId },
+          )) as Infer<typeof CallToolResultSchema>;
+          return result;
+        },
+      );
+    },
+
+    setErrorHandler(handler: (error: Error) => void): void {
+      server.onerror = handler;
+    },
+
+    async close(): Promise<void> {
+      await server.close();
+    },
+  };
 }

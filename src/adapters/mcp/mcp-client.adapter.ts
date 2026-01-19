@@ -1,85 +1,63 @@
-/**
- * MCP Client Adapter - Wraps MCP SDK Client
- */
+import {
+  CallToolRequest,
+  ConnectOptions,
+  ListToolsResult,
+  McpClientPort,
+  RequestOptions,
+} from "../../ports/mcp-client.port";
+import { SdkTransportPort, TransportPort } from "../../ports/transport.port";
+import { ToolDefinition, ToolResponse } from "../../domain/tool-aggregator";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
-import {
-  McpClientPort,
-  McpClientFactory,
-  ConnectOptions,
-  RequestOptions,
-  ListToolsResult,
-  CallToolRequest,
-} from "../../ports/mcp-client.port";
-import { SdkTransportPort, TransportPort } from "../../ports/transport.port";
-import { ToolResponse, ToolDefinition } from "../../domain/types";
 
-/**
- * Adapter for MCP Client.
- * Wraps the MCP SDK Client class.
- */
-export class McpClientAdapter implements McpClientPort {
-  private client: Client;
-
-  constructor(name: string, version: string) {
-    this.client = new Client({ name, version }, {});
+function getSdkTransport(transport: TransportPort): unknown {
+  if ("getSdkTransport" in transport) {
+    return (transport as SdkTransportPort).getSdkTransport();
   }
-
-  async connect(transport: TransportPort, options?: ConnectOptions): Promise<void> {
-    // Get the SDK transport from the adapter
-    const sdkTransport = this.getSdkTransport(transport);
-    await this.client.connect(sdkTransport as Transport, {
-      signal: options?.signal,
-    });
-  }
-
-  async listTools(_options?: RequestOptions): Promise<ListToolsResult> {
-    // Note: MCP SDK listTools doesn't support signal in params anymore
-    const result = await this.client.listTools();
-
-    // Map SDK tools to domain types
-    const tools: ToolDefinition[] = result.tools.map((tool) => ({
-      name: tool.name,
-      description: tool.description || "",
-      inputSchema: (tool.inputSchema || {}) as Record<string, unknown>,
-    }));
-
-    return { tools };
-  }
-
-  async callTool(request: CallToolRequest): Promise<ToolResponse> {
-    const result = await this.client.callTool({
-      name: request.name,
-      arguments: request.arguments,
-    });
-
-    // Map SDK result to domain type
-    return result as ToolResponse;
-  }
-
-  async close(): Promise<void> {
-    await this.client.close();
-  }
-
-  /**
-   * Extract SDK transport from our adapter
-   */
-  private getSdkTransport(transport: TransportPort): unknown {
-    // Check if transport has getSdkTransport method (our adapters)
-    if ("getSdkTransport" in transport) {
-      return (transport as SdkTransportPort).getSdkTransport();
-    }
-    // Fallback: assume it's already an SDK transport
-    return transport;
-  }
+  return transport;
 }
 
-/**
- * Factory for creating MCP client instances
- */
-export class McpClientFactoryAdapter implements McpClientFactory {
-  create(name: string, version: string): McpClientPort {
-    return new McpClientAdapter(name, version);
-  }
+export function createMcpClientAdapter(
+  name: string,
+  version: string,
+): McpClientPort {
+  const client = new Client({ name, version }, {});
+
+  return {
+    async connect(
+      transport: TransportPort,
+      options?: ConnectOptions,
+    ): Promise<void> {
+      const sdkTransport = getSdkTransport(transport);
+      await client.connect(sdkTransport as Transport, {
+        signal: options?.signal,
+      });
+    },
+
+    async listTools(_options?: RequestOptions): Promise<ListToolsResult> {
+      const result = await client.listTools();
+
+      const tools: ToolDefinition[] = result.tools.map((tool) => ({
+        name: tool.name,
+        description: tool.description || "",
+        inputSchema: (tool.inputSchema || {}) as Record<string, unknown>,
+      }));
+
+      return { tools };
+    },
+
+    async callTool(request: CallToolRequest): Promise<ToolResponse> {
+      const result = await client.callTool({
+        name: request.name,
+        arguments: request.arguments,
+      });
+
+      return result as ToolResponse;
+    },
+
+    async close(): Promise<void> {
+      await client.close();
+    },
+  };
 }

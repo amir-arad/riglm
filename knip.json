@@ -1,26 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "src/index.ts",
-    "test/**/*.test.ts",
-    "test/fixtures/*.ts"
-  ],
-  "project": [
-    "src/**/*.ts",
-    "test/**/*.ts"
-  ],
-  "ignore": [
-    "**/*.d.ts",
-    "**/index.ts"
-  ],
-  "ignoreDependencies": [
-    "bun-types"
-  ],
-  "ignoreBinaries": [
-    "dist/index.js"
-  ],
+  "entry": ["src/index.ts", "!**/*.test.ts", "!**/*.spec.ts"],
+  "project": ["src/**/*.ts"],
+  "ignore": ["test/**", "e2e-ui/**"],
+  "ignoreDependencies": ["bun-types"],
+  "ignoreBinaries": ["dot"],
   "ignoreExportsUsedInFile": true,
   "eslint": {
     "config": [".eslintrc.*", "eslint.config.*"]
-  }
+  },
+  "bun": false,
+  "playwright": false
 }

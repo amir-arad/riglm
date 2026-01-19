@@ -6,7 +6,7 @@ import { describe, test, expect, beforeEach } from "bun:test";
 import { ConfigService, createConfigService } from "../src/application/config.service";
 import { createMockConfigStorage } from "./mocks/mock-config";
 import { createSilentLogger } from "./mocks/mock-logger";
-import { Config } from "../src/domain/types";
+import { Config } from "../src/domain/config-resolver";
 
 describe("ConfigService", () => {
   let configService: ConfigService;

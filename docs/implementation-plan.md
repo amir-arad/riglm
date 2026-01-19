@@ -9,13 +9,12 @@ Transform the MCP router (RigLM) into a full-featured Personal AI Extension Mana
 | Phase | Focus | Status |
 |-------|-------|--------|
 | 1 | Foundation & Cleanup | ✅ Complete |
-| 2 | Dynamic Extension State | Planned |
-| 3 | Real-Time WebSocket | Planned |
-| 4 | Client Redesign | Planned |
+| 2 | Layered Server Toggle | Planned |
+| 3 | Sessions UI | Planned |
 
 ---
 
-## Phase 1: Foundation & Cleanup
+## Phase 1: Foundation & Cleanup ✅
 
 **Goal:** Clean codebase ready for new features
 
@@ -34,343 +33,156 @@ Transform the MCP router (RigLM) into a full-featured Personal AI Extension Mana
 - Removed `connectServerImpl()` and related code
 - Cleaned up imports
 
-### 1.4 Extension Registry ✅
-
-File-based extension CRUD operations with Zod validation.
-
-**Design Document**: See [extension-registry-design.md](./extension-registry-design.md) for terminology, design decisions, and rationale.
-
-**Files:**
-```
-src/extension-manager/
-├── index.ts                 # Public exports
-└── extension.registry.ts    # CRUD operations
-```
-
-**Domain types:** `src/domain/extension.ts` (Zod schemas)
-**Storage adapter:** `src/adapters/storage/file-extension.adapter.ts`
-
-**Data Model:**
-```typescript
-interface Extension {
-  id: string;
-  type: "mcp-server";
-  name: string;
-  description?: string;
-  enabled: boolean;
-  config: LocalServerConfig | RemoteServerConfig;
-  filters?: string[];
-  tags?: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface LocalServerConfig {
-  command: string;
-  args: string[];
-  env?: Record<string, string>;
-}
-
-interface RemoteServerConfig {
-  url: string;
-  headers?: Record<string, string>;
-}
-```
-
-**Storage:** `data/extensions.json`
-
-**API:**
-```typescript
-class ExtensionRegistry {
-  list(): Extension[]
-  get(id: string): Extension | undefined
-  create(ext: Omit<Extension, 'id' | 'createdAt' | 'updatedAt'>): Extension
-  update(id: string, ext: Partial<Extension>): Extension
-  delete(id: string): boolean
-  getEnabled(): Extension[]
-}
-```
-
 ---
 
-## Phase 2: Dynamic Extension State
+## Phase 2: Layered Server Toggle
 
-**Goal:** Enable/disable extensions per session without restart
+**Goal:** Toggle MCP servers at endpoint-level (persistent) and session-level (ephemeral)
 
-### 2.1 Per-Session Extension State
+### 2.1 Data Model
 
-Modify `hosts.service.ts` to track which extensions are enabled per session.
-
-**Changes to `HostSession`:**
 ```typescript
+// Endpoint config (persistent, in config.json5)
+interface EndpointConfig {
+  servers: string[];           // Available servers
+  disabledServers?: string[];  // Disabled by default (NEW)
+  filters?: string[];
+}
+
+// Session state (ephemeral, in-memory)
 interface HostSession {
   sessionId: string;
-  enabledExtensions: Set<string>;  // NEW
+  serverOverrides: Map<string, boolean>;  // NEW: true=force-enable, false=force-disable
   tools: ToolDefinition[];
   toolHandlers: Map<string, ToolHandler>;
-  // ...
 }
 ```
 
-**New Methods:**
+### 2.2 Toggle Logic
+
 ```typescript
-// In HostsService
-enableExtension(sessionId: string, extensionId: string): Promise<void>
-disableExtension(sessionId: string, extensionId: string): Promise<void>
-getSessionState(sessionId: string): SessionState
+function isServerEnabled(serverName: string, endpoint: EndpointConfig, session: HostSession): boolean {
+  // 1. Check session override (highest priority)
+  if (session.serverOverrides.has(serverName)) {
+    return session.serverOverrides.get(serverName)!;
+  }
+  // 2. Check endpoint default
+  if (endpoint.disabledServers?.includes(serverName)) {
+    return false;
+  }
+  // 3. Server is in endpoint.servers list = enabled
+  return endpoint.servers.includes(serverName);
+}
 ```
 
-### 2.2 Tool List Updates
+### 2.3 API Endpoints
 
-When extension is toggled:
-1. Update `enabledExtensions` set
-2. Recompute available tools
-3. Send MCP `notifications/tools/list_changed`
-4. Client re-fetches tool list
-
-**Key:** The MCP SDK already supports `listChanged` capability (enabled in `hosts.service.ts:85`)
-
-### 2.3 Management REST API
-
-**New File:** `src/api/management.controller.ts`
-
-**Endpoints:**
 ```
-GET    /api/extensions              # List all extensions
-POST   /api/extensions              # Create extension
-GET    /api/extensions/:id          # Get extension
-PUT    /api/extensions/:id          # Update extension
-DELETE /api/extensions/:id          # Delete extension
+# Endpoint-level (persistent)
+PUT  /api/endpoints/:id/servers/:server/disable   # Add to disabledServers
+PUT  /api/endpoints/:id/servers/:server/enable    # Remove from disabledServers
 
-GET    /api/sessions                # List active sessions
-GET    /api/sessions/:id            # Get session details
-PUT    /api/sessions/:id/extensions/:extId   # Toggle extension
-DELETE /api/sessions/:id            # Force disconnect
+# Session-level (ephemeral)
+GET  /api/sessions                                 # List active sessions
+GET  /api/sessions/:id                             # Session details + effective tool list
+POST /api/sessions/:id/override/:server            # Body: { enabled: boolean }
+DELETE /api/sessions/:id/override/:server          # Clear override, use endpoint default
 ```
+
+### 2.4 MCP Notification
+
+Wire up `notifyToolsListChanged()` (already declared in capabilities but never called):
+
+- Call when config reloads
+- Call when server toggled at endpoint level
+- Call when session override changes
+
+MCP clients will automatically re-fetch the tool list.
+
+### 2.5 Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/domain/config-resolver.ts` | Add `disabledServers` to EndpointConfigSchema |
+| `src/application/hosts.service.ts` | Add `serverOverrides` to HostSession, implement toggle logic |
+| `src/adapters/http/management.routes.ts` | Add session and toggle endpoints |
+| `src/adapters/mcp/mcp-server.adapter.ts` | Expose `notifyToolsListChanged()` |
 
 ---
 
-## Phase 3: Real-Time WebSocket
+## Phase 3: Sessions UI
 
-**Goal:** Push session/extension events to Web UI
+**Goal:** Add session management to existing vanilla UI
 
-### 3.1 WebSocket Server
+### 3.1 New Sessions View
 
-**New File:** `src/api/websocket.controller.ts`
-
-**Dependencies:** Add `ws` package
-
-**Events (Server → Client):**
-```typescript
-interface SessionCreatedEvent {
-  type: "session:created";
-  session: { id, endpointId, extensions: [...] };
-}
-
-interface SessionClosedEvent {
-  type: "session:closed";
-  sessionId: string;
-}
-
-interface ExtensionToggledEvent {
-  type: "extension:toggled";
-  sessionId: string;
-  extensionId: string;
-  enabled: boolean;
-}
-```
-
-**Commands (Client → Server):**
-```typescript
-interface ToggleExtensionCommand {
-  type: "toggle-extension";
-  sessionId: string;
-  extensionId: string;
-  enabled: boolean;
-}
-```
-
-### 3.2 Event Integration
-
-Emit events from:
-- `TransportSessionManager` - session lifecycle
-- `HostsService` - extension toggles
-
----
-
-## Phase 4: Client Redesign
-
-**Goal:** Enhanced Web UI for extension and session management
-
-### 4.1 Current State
-
-The current Web UI is a vanilla HTML/CSS/JS implementation in `public/`. This may be enhanced or replaced with a React-based solution depending on feature requirements.
-
-### 4.2 API Client (if React UI is adopted)
-
-**Potential Structure:**
-```
-src/web/                      
-├── api/
-│   ├── client.ts             # Base fetch client
-│   ├── extensions.api.ts     # Extension CRUD
-│   ├── sessions.api.ts       # Session queries
-│   └── websocket.ts          # Real-time connection
-├── pages/
-│   ├── Extensions.tsx
-│   ├── Sessions.tsx
-│   └── Dashboard.tsx
-└── hooks/
-    ├── useExtensions.ts
-    ├── useSessions.ts
-    └── useWebSocket.ts
-```
-
-### 4.3 Features
-
-**Extensions Page (`/extensions`):**
-- List all defined extensions
-- Create/edit/delete extensions
-- Show enabled/disabled status
-
-**Sessions Page (`/sessions`):**
-- Live list of connected MCP clients
-- Per-session extension toggles
-- Connection info (endpoint, client name)
-
-**Profiles Page (`/profiles`):** (Optional for MVP)
-- Save/load extension configurations
-- Quick-switch between setups
-
----
-
-## File Structure (Current + Planned)
+Add to `public/index.html`:
 
 ```
-riglm/                            # Flattened monorepo (no server/ or client/ subdirs)
-├── src/
-│   ├── index.ts                  # Entry point (wires adapters)
-│   ├── server.ts                 # RiglmServer (Express app)
-│   ├── embedded-assets.ts        # Standalone binary asset embedding
-│   │
-│   ├── ports/                    # Interface contracts ✅
-│   │   ├── logger.port.ts
-│   │   ├── config-storage.port.ts
-│   │   ├── mcp-client.port.ts
-│   │   ├── mcp-server.port.ts
-│   │   └── transport.port.ts
-│   │
-│   ├── domain/                   # Pure business logic ✅
-│   │   ├── types.ts
-│   │   ├── error.ts
-│   │   ├── filter-engine.ts
-│   │   ├── config-resolver.ts
-│   │   └── tool-aggregator.ts
-│   │
-│   ├── adapters/                 # Implementations ✅
-│   │   ├── http/                 # Express routes
-│   │   ├── logging/              # Winston adapter
-│   │   ├── storage/              # File config adapter
-│   │   └── mcp/                  # MCP client/server adapters
-│   │
-│   ├── application/              # Services ✅
-│   │   ├── hosts.service.ts      # Modified in Phase 2
-│   │   └── backend.service.ts
-│   │
-│   ├── extension-manager/        # Phase 1.4 ✅
-│   │   ├── index.ts
-│   │   └── extension.registry.ts
-│   │
-│   ├── api/                      # Phase 3 (planned)
-│   │   └── websocket.controller.ts
-│   │
-│   ├── host-gateway/             # Session management ✅
-│   │   └── transport-session-manager.ts
-│   │
-│   ├── cli/                      # CLI commands ✅
-│   │
-│   └── etc/                      # Utilities ✅
-│       ├── env.ts
-│       └── service.ts
-│
-├── public/                       # Vanilla Web UI (HTML/CSS/JS) ✅
-│   ├── index.html
-│   └── favicon.svg
-│
-├── data/
-│   └── extensions.json           # Phase 1.4 ✅
-│
-├── test/                         # Unit and E2E tests ✅
-│   ├── filter.test.ts
-│   ├── e2e/
-│   ├── fixtures/
-│   └── mocks/
-│
-├── e2e-ui/                       # Playwright UI tests ✅
-│
-└── docs/                         # Documentation
+#/sessions route
+├── Table: sessionId, endpoint, connectedAt, servers
+├── Per-row: toggle switches for each server
+├── "Reset to default" button per session
+└── Auto-refresh: poll /api/sessions every 10s when visible
 ```
 
-**Note:** The `client/` directory with React/shadcn was removed. The current Web UI is a vanilla HTML/CSS/JS implementation in `public/`. Phase 4 may introduce a new React-based UI if needed.
+### 3.2 Enhanced Endpoints View
+
+Update existing Endpoints view:
+- Show `disabledServers` as grayed-out toggle switches
+- Toggle persists to config file
+
+### 3.3 Visual Feedback
+
+- Toast notifications on toggle success/failure
+- Spinner during API calls
+- Session count badge in nav
+
+### 3.4 Files to Modify
+
+| File | Changes |
+|------|---------|
+| `public/index.html` | Add Sessions view (~150 lines), enhance Endpoints view |
 
 ---
 
 ## Verification Checklist
 
-### After Phase 1
+### After Phase 1 ✅
 - [x] `bun run typecheck` passes
 - [x] Server starts with `bun run dev`
 - [x] Can connect MCP client to endpoint
-- [x] 173 tests passing
+- [x] 110 tests passing
 
 ### After Phase 2
-- [ ] REST API returns extension list
-- [ ] Can toggle extension via API
-- [ ] Tool list updates after toggle
+- [ ] `GET /api/sessions` returns active sessions
+- [ ] `POST /api/sessions/:id/override/:server` toggles server for session
+- [ ] MCP client receives `tools/list_changed` notification
+- [ ] Tool list updates correctly after toggle
 
 ### After Phase 3
-- [ ] WebSocket connects from browser
-- [ ] Session events appear in real-time
-- [ ] Toggle via WebSocket works
-
-### After Phase 4
-- [ ] Web UI loads at localhost:8080
-- [ ] Extensions page shows list
-- [ ] Sessions page shows live connections
-- [ ] Toggle switches work end-to-end
+- [ ] Sessions view shows live connections
+- [ ] Toggle switches work for session-level overrides
+- [ ] Endpoint toggles persist to config
+- [ ] UI auto-refreshes every 10s
 
 ---
 
-## Dependencies to Add
+## Dependencies
 
-### Server (Phase 3)
-```json
-{
-  "dependencies": {
-    "ws": "^8.x"
-  },
-  "devDependencies": {
-    "@types/ws": "^8.x"
-  }
-}
-```
+**No new dependencies required.**
 
-### Client (Phase 4 - if React UI is adopted)
-```json
-{
-  "dependencies": {
-    "react": "^18.x",
-    "react-dom": "^18.x",
-    "@tanstack/react-query": "^5.x"
-  }
-}
-```
+- No WebSocket (polling is sufficient for personal use)
+- No React (vanilla JS handles current complexity)
+- No database (session state is ephemeral by design)
 
 ---
 
-## Risk Mitigation
+## Deferred Features
 
-1. **Test suite** - ✅ Migrated to Bun's built-in test runner (173 tests passing)
-2. **MCP client compatibility** - Test with Claude Code, Cursor, Cline
-3. **WebSocket reliability** - Add reconnection logic in client
-4. **State sync** - Handle race conditions in toggle operations
+Add only if users request:
+
+- **Profiles** - Save/load extension configurations
+- **WebSocket** - Real-time push (when >50 concurrent sessions)
+- **React migration** - When UI complexity exceeds vanilla JS
+- **Database** - When session state needs to survive restarts

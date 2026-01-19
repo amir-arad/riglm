@@ -1,4 +1,4 @@
-# ool Filtering in RigLM
+# Tool Filtering in RigLM
 
 This guide explains how to use RigLM' tool filtering capabilities to control which tools are available across your servers.
 

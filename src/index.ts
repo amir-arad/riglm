@@ -1,19 +1,9 @@
-/**
- * Entry Point - CLI for Riglm
- *
- * Routes to CLI commands: serve (default), validate, init, version
- * Handles process signals for graceful shutdown.
- */
-
-import { main } from "./cli";
 import { ExitCode } from "./cli/output/exit-codes";
-import type { ServerRuntime } from "./cli/commands/serve.command";
+import { parseArgs } from "./cli/parse-args";
+import { runCli, type ServerRuntime } from "./cli";
 
 let runtime: ServerRuntime | null = null;
 
-/**
- * Graceful shutdown handler
- */
 async function shutdown(exitCode: ExitCode): Promise<never> {
   if (runtime) {
     try {
@@ -25,7 +15,6 @@ async function shutdown(exitCode: ExitCode): Promise<never> {
   process.exit(exitCode);
 }
 
-// Signal handlers
 process.on("SIGINT", () => {
   console.log("\nReceived SIGINT signal, cleaning up...");
   shutdown(ExitCode.SUCCESS);
@@ -46,12 +35,14 @@ process.on("uncaughtException", (error) => {
   shutdown(ExitCode.RUNTIME_ERROR);
 });
 
-// Run CLI
-main()
+runCli(parseArgs(process.argv.slice(2)))
   .then((r) => {
     runtime = r;
   })
   .catch((error) => {
-    console.error("Fatal error:", error instanceof Error ? error.message : error);
+    console.error(
+      "Fatal error:",
+      error instanceof Error ? error.message : error,
+    );
     process.exit(ExitCode.RUNTIME_ERROR);
   });

@@ -1,28 +1,24 @@
-/**
- * HTTP routes - HTTP adapter layer
- */
+import {
+  HttpServerTransportPort,
+  ServerTransportFactory,
+} from "../../ports/transport.port";
 import { Request, Response, Router } from "express";
 
 import { ApiError } from "../../domain/error";
+import { CloseablePool } from "../../etc/closeable";
 import { HostsService } from "../../application/hosts.service";
 import type { LoggerPort } from "../../ports/logger.port";
-import { Services } from "../../etc/service";
-import { HttpServerTransportPort, ServerTransportFactory } from "../../ports/transport.port";
 import { SseServerTransportAdapter } from "../mcp/transports/sse-server.adapter";
 
 export function makeHostsRoutes(
-  hostsServices: Services<HostsService>,
+  hostsServices: CloseablePool<HostsService>,
   serverTransportFactory: ServerTransportFactory,
-  logger: LoggerPort
+  logger: LoggerPort,
 ) {
   const hostsRoutes = Router();
 
   hostsRoutes.param("endpointId", async (req, res, next, endpointId) => {
     try {
-      // Note: We don't pass an abort signal here because:
-      // - For SSE: the connection stays open and cleanup is handled in the route
-      // - For HTTP: each request is independent and doesn't own the service
-      // Individual transports manage their own session lifecycle
       const hostsService = await hostsServices.get(endpointId, {});
       if (!hostsService) {
         res.writeHead(404, { "Content-Type": "text/plain" });
@@ -46,12 +42,11 @@ export function makeHostsRoutes(
       const controller = new AbortController();
       const transport = new SseServerTransportAdapter(
         `/${request.hostsService.endpointId}/messages`,
-        res
+        res,
       );
-      const sessionId = await request.hostsService.createSession(
-        transport,
-        { signal: controller.signal }
-      );
+      const sessionId = await request.hostsService.createSession(transport, {
+        signal: controller.signal,
+      });
 
       res.write(`event: session\ndata: ${JSON.stringify({ sessionId })}\n\n`);
       const messageEndpoint = `/${request.hostsService.endpointId}/messages/${sessionId}`;
@@ -86,7 +81,6 @@ export function makeHostsRoutes(
     await handleMessage(sessionId, req, res, logger);
   });
 
-  // Streamable HTTP transport route - handles all MCP communication over HTTP
   hostsRoutes.all("/:endpointId/mcp", async (req, res): Promise<void> => {
     try {
       const request = req as EndpointRequest;
@@ -97,7 +91,6 @@ export function makeHostsRoutes(
 
       const sessionId = req.headers["mcp-session-id"] as string | undefined;
 
-      // Existing session - route to it
       if (sessionId) {
         if (!request.hostsService.hasSession(sessionId)) {
           res.status(404).json({ error: "Session not found" });
@@ -114,22 +107,18 @@ export function makeHostsRoutes(
         return;
       }
 
-      // New session - only POST allowed for initialization
       if (req.method !== "POST") {
-        res.status(400).json({ error: "New sessions require POST with initialize request" });
+        res
+          .status(400)
+          .json({ error: "New sessions require POST with initialize request" });
         return;
       }
 
-      const transport = serverTransportFactory.createHttpServerTransport({});
+      const transport = serverTransportFactory({});
 
       await request.hostsService.createSession(transport, {});
       await transport.handleRequest(req, res, req.body);
       logger.info("HTTP session created:", { sessionId: transport.sessionId });
-
-      // Note: HTTP sessions persist across requests and are cleaned up by:
-      // - Inactivity timeout in TransportSessionManager
-      // - Explicit DELETE request (if implemented)
-      // Unlike SSE, we don't remove the session when the request ends
     } catch (error) {
       logger.error("Error handling MCP HTTP request:", error);
       if (!res.headersSent) {
@@ -160,10 +149,9 @@ type EndpointRequest = Request<{
   hostsService: HostsService;
 };
 
-/**
- * Type guard to check if a transport supports HTTP handleRequest
- */
-function isHttpServerTransport(transport: unknown): transport is HttpServerTransportPort {
+function isHttpServerTransport(
+  transport: unknown,
+): transport is HttpServerTransportPort {
   return (
     transport !== null &&
     typeof transport === "object" &&
@@ -172,28 +160,41 @@ function isHttpServerTransport(transport: unknown): transport is HttpServerTrans
   );
 }
 
-async function handleMessage(sessionId: unknown, req: Request, res: Response, logger: LoggerPort) {
+async function handleMessage(
+  sessionId: unknown,
+  req: Request,
+  res: Response,
+  logger: LoggerPort,
+) {
   const { hostsService } = req as EndpointRequest;
   if (!sessionId || typeof sessionId !== "string") {
-    return res.status(400).json({ error: "Session ID is required" }), void 0;
+    return (res.status(400).json({ error: "Session ID is required" }), void 0);
   }
   if (!hostsService.hasSession(sessionId)) {
-    return res.status(404).json({ error: "Session not found" }), void 0;
+    return (res.status(404).json({ error: "Session not found" }), void 0);
   }
   const session = hostsService.getSession(sessionId);
   if (!session) {
     return (
-      res.status(503).json({ error: "Session transport not available" }), void 0
+      res.status(503).json({ error: "Session transport not available" }),
+      void 0
     );
   }
 
   try {
-    // Check if transport supports handlePostMessage (SSE transport)
-    if ('handlePostMessage' in session.transport && typeof session.transport.handlePostMessage === 'function') {
-      await (session.transport as SseServerTransportAdapter).handlePostMessage(req, res, req.body);
+    if (
+      "handlePostMessage" in session.transport &&
+      typeof session.transport.handlePostMessage === "function"
+    ) {
+      await (session.transport as SseServerTransportAdapter).handlePostMessage(
+        req,
+        res,
+        req.body,
+      );
     } else {
-      // For non-SSE transports, return method not allowed
-      res.status(405).json({ error: "Method not allowed for this transport type" });
+      res
+        .status(405)
+        .json({ error: "Method not allowed for this transport type" });
     }
   } catch (error) {
     logger.error(`Error handling message for session ${sessionId}:`, error);

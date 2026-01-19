@@ -1,262 +1,223 @@
-/**
- * CLI Entry Point
- *
- * Parses command-line arguments and routes to appropriate command handlers.
- * Uses Node's built-in util.parseArgs (available in Bun).
- *
- * @see docs/cli-design.md for specification
- */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import JSON5 from "json5";
+import * as readline from "readline";
 
 import type {
-  Command,
-  InitOptions,
   ParsedArgs,
   ServeOptions,
-  ValidateOptions,
   VersionOptions,
 } from "./config/args.schema";
+import {
+  getDefaultConfigLocation,
+  type ConfigLocation,
+} from "./config/config-locator";
+import { resolveConfig, ResolvedConfig } from "./config/resolved-config";
+import { ValidatedConfigSchema, type Config } from "../domain/config-resolver";
+import { printBanner, printQuietBanner } from "./output/banner";
 import { ExitCode, exit } from "./output/exit-codes";
-
-import { initCommand } from "./commands/init.command";
-import { parseArgs as nodeParseArgs } from "util";
 import { printHelp } from "./output/help";
-import { serveCommand, type ServerRuntime } from "./commands/serve.command";
-import { validateCommand } from "./commands/validate.command";
-import { versionCommand } from "./commands/version.command";
+import { printVersion, version } from "./output/version";
+import { bootstrap, type ServerRuntime } from "../application/bootstrap";
 
-// ============================================================================
-// Argument Parsing
-// ============================================================================
+export type { ServerRuntime } from "../application/bootstrap";
 
-/**
- * Parse CLI arguments using Node's util.parseArgs
- */
-export function parseArgs(argv: string[]): ParsedArgs {
-  // First pass: extract command and check for global options
-  const firstArg = argv[0];
-  const commands: Command[] = ["serve", "validate", "init", "version", "help"];
+const MINIMAL_CONFIG = `{
+  // Riglm Configuration
+  // See: https://github.com/your-org/riglm
 
-  let command: Command = "serve"; // Default command
-  let argsToProcess = argv;
+  // MCP servers to connect to
+  "servers": {
+    // Add your MCP servers here
+    // "example": {
+    //   "command": "npx",
+    //   "args": ["-y", "@modelcontextprotocol/server-example"]
+    // }
+  },
 
-  if (firstArg && commands.includes(firstArg as Command)) {
-    command = firstArg as Command;
-    argsToProcess = argv.slice(1);
-  } else if (firstArg === "--help" || firstArg === "-h") {
-    command = "help";
-    argsToProcess = [];
-  } else if (firstArg === "--version" || firstArg === "-V") {
-    command = "version";
-    argsToProcess = [];
-  }
-
-  // Parse command-specific options
-  switch (command) {
-    case "serve":
-      return parseServeArgs(argsToProcess);
-    case "validate":
-      return parseValidateArgs(argsToProcess);
-    case "init":
-      return parseInitArgs(argsToProcess);
-    case "version":
-      return parseVersionArgs(argsToProcess);
-    case "help":
-      return { command: "help", options: {}, positionals: [] };
-    default:
-      return { command: "serve", options: {}, positionals: [] };
+  // Endpoints that aggregate servers
+  "endpoints": {
+    // Add your endpoints here
+    // "main": {
+    //   "servers": ["example"],
+    //   "description": "Main endpoint"
+    // }
   }
 }
+`;
 
-/**
- * Parse serve command options
- */
-function parseServeArgs(argv: string[]): ParsedArgs {
-  const { values, positionals } = nodeParseArgs({
-    args: argv,
-    options: {
-      port: { type: "string", short: "p" },
-      host: { type: "string", short: "H" },
-      config: { type: "string", short: "c" },
-      "log-level": { type: "string", short: "l" },
-      "log-format": { type: "string" },
-      "log-file": { type: "string" },
-      "no-ui": { type: "boolean" },
-      "no-api": { type: "boolean" },
-      quiet: { type: "boolean", short: "q" },
-      verbose: { type: "boolean", short: "v" },
-      watch: { type: "boolean", short: "w" },
-      "dry-run": { type: "boolean" },
-      help: { type: "boolean", short: "h" },
-    },
-    allowPositionals: true,
-    strict: false, // Allow unknown options for flexibility
-  });
+const MINIMAL_EXTENSIONS = `{
+  "extensions": []
+}
+`;
 
-  // Check for help flag
-  if (values.help) {
-    return { command: "help", options: {}, positionals: [] };
+function loadConfigFile(configPath: string): Config | null {
+  if (!existsSync(configPath)) {
+    return null;
   }
 
-  const options: ServeOptions = {
-    port: values.port ? parseInt(values.port as string, 10) : undefined,
-    host: values.host as string | undefined,
-    config: values.config as string | undefined,
-    logLevel: values["log-level"] as ServeOptions["logLevel"],
-    logFormat: values["log-format"] as ServeOptions["logFormat"],
-    logFile: values["log-file"] as string | undefined,
-    noUi: values["no-ui"] as boolean | undefined,
-    noApi: values["no-api"] as boolean | undefined,
-    quiet: values.quiet as boolean | undefined,
-    verbose: values.verbose as boolean | undefined,
-    watch: values.watch as boolean | undefined,
-    dryRun: values["dry-run"] as boolean | undefined,
-  };
-
-  return { command: "serve", options, positionals };
-}
-
-/**
- * Parse validate command options
- */
-function parseValidateArgs(argv: string[]): ParsedArgs {
-  const { values, positionals } = nodeParseArgs({
-    args: argv,
-    options: {
-      config: { type: "string", short: "c" },
-      strict: { type: "boolean" },
-      format: { type: "string" },
-      help: { type: "boolean", short: "h" },
-    },
-    allowPositionals: true,
-    strict: false,
-  });
-
-  if (values.help) {
-    return { command: "help", options: {}, positionals: [] };
-  }
-
-  const options: ValidateOptions = {
-    config: values.config as string | undefined,
-    strict: values.strict as boolean | undefined,
-    format: values.format as ValidateOptions["format"],
-  };
-
-  return { command: "validate", options, positionals };
-}
-
-/**
- * Parse init command options
- */
-function parseInitArgs(argv: string[]): ParsedArgs {
-  const { values, positionals } = nodeParseArgs({
-    args: argv,
-    options: {
-      path: { type: "string", short: "p" },
-      local: { type: "boolean" },
-      template: { type: "string", short: "t" },
-      force: { type: "boolean", short: "f" },
-      help: { type: "boolean", short: "h" },
-    },
-    allowPositionals: true,
-    strict: false,
-  });
-
-  if (values.help) {
-    return { command: "help", options: {}, positionals: [] };
-  }
-
-  const options: InitOptions = {
-    path: values.path as string | undefined,
-    local: values.local as boolean | undefined,
-    template: values.template as InitOptions["template"],
-    force: values.force as boolean | undefined,
-  };
-
-  return { command: "init", options, positionals };
-}
-
-/**
- * Parse version command options
- */
-function parseVersionArgs(argv: string[]): ParsedArgs {
-  const { values, positionals } = nodeParseArgs({
-    args: argv,
-    options: {
-      json: { type: "boolean" },
-      check: { type: "boolean" },
-      help: { type: "boolean", short: "h" },
-    },
-    allowPositionals: true,
-    strict: false,
-  });
-
-  if (values.help) {
-    return { command: "help", options: {}, positionals: [] };
-  }
-
-  const options: VersionOptions = {
-    json: values.json as boolean | undefined,
-    check: values.check as boolean | undefined,
-  };
-
-  return { command: "version", options, positionals };
-}
-
-// ============================================================================
-// Command Routing
-// ============================================================================
-
-/**
- * Route to appropriate command handler
- * Returns runtime if serve command started successfully (for signal handlers)
- */
-export async function runCli(argv: string[]): Promise<ServerRuntime | null> {
-  const parsed = parseArgs(argv);
-
-  switch (parsed.command) {
-    case "serve": {
-      const runtime = await serveCommand(parsed.options as ServeOptions);
-      if (!runtime) {
-        // Dry-run or error - exit cleanly
-        exit(ExitCode.SUCCESS);
-      }
-      return runtime;
-    }
-    case "validate":
-      await validateCommand(parsed.options as ValidateOptions);
-      break;
-    case "init":
-      await initCommand(parsed.options as InitOptions);
-      break;
-    case "version":
-      await versionCommand(parsed.options as VersionOptions);
-      break;
-    case "help":
-      printHelp();
-      exit(ExitCode.SUCCESS);
-    default:
-      printHelp();
-      exit(ExitCode.SUCCESS);
-  }
-  return null;
-}
-
-// ============================================================================
-// Main Entry Point
-// ============================================================================
-
-/**
- * CLI main function
- * Called from src/index.ts
- * Returns runtime if serve command started (for signal handlers)
- */
-export async function main(): Promise<ServerRuntime | null> {
   try {
-    // Get arguments (skip node/bun executable and script path)
-    const argv = process.argv.slice(2);
-    return await runCli(argv);
+    const content = readFileSync(configPath, "utf-8");
+    const rawConfig = JSON5.parse(content);
+
+    const result = ValidatedConfigSchema.safeParse(rawConfig);
+    if (!result.success) {
+      console.error("Configuration validation failed:");
+      for (const issue of result.error.issues) {
+        console.error(`  ${issue.path.join(".")}: ${issue.message}`);
+      }
+      return null;
+    }
+
+    return result.data;
   } catch (error) {
-    console.error("Fatal error:", error instanceof Error ? error.message : error);
-    exit(ExitCode.RUNTIME_ERROR);
+    console.error(
+      `Failed to load config: ${error instanceof Error ? error.message : error}`,
+    );
+    return null;
   }
+}
+
+async function promptYesNo(question: string): Promise<boolean> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question(`${question} [y/N] `, (answer) => {
+      rl.close();
+      resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes");
+    });
+  });
+}
+
+async function promptChoice(
+  question: string,
+  choices: string[],
+): Promise<number> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  console.log(question);
+  choices.forEach((choice, i) => {
+    console.log(`  ${i + 1}. ${choice}`);
+  });
+
+  return new Promise((resolve) => {
+    rl.question(`Choose [1-${choices.length}]: `, (answer) => {
+      rl.close();
+      const num = parseInt(answer, 10);
+      if (num >= 1 && num <= choices.length) {
+        resolve(num - 1);
+      } else {
+        resolve(0);
+      }
+    });
+  });
+}
+
+function createConfig(location: ConfigLocation): boolean {
+  try {
+    if (!existsSync(location.directory)) {
+      mkdirSync(location.directory, { recursive: true });
+    }
+
+    writeFileSync(location.configPath, MINIMAL_CONFIG, "utf-8");
+    writeFileSync(location.extensionsPath, MINIMAL_EXTENSIONS, "utf-8");
+
+    console.log("");
+    console.log(`Created: ${location.configPath}`);
+    console.log(`Created: ${location.extensionsPath}`);
+    console.log("");
+
+    return true;
+  } catch (error) {
+    console.error(
+      `Failed to create config: ${error instanceof Error ? error.message : error}`,
+    );
+    return false;
+  }
+}
+
+export async function runCli(
+  parsed: ParsedArgs,
+): Promise<ServerRuntime | null> {
+  switch (parsed.command) {
+    case "version":
+      printVersion((parsed.options as VersionOptions).json ?? false);
+      exit(ExitCode.SUCCESS);
+
+    case "help":
+    default:
+      printHelp();
+      exit(ExitCode.SUCCESS);
+
+    case "serve": {
+      const config = resolveConfig(parsed.options as ServeOptions);
+
+      if (!config.configPath) {
+        if (config.quiet) {
+          exit(ExitCode.CONFIG_NOT_FOUND);
+        }
+
+        console.log("No configuration file found.");
+        console.log("");
+        console.log("Searched locations:");
+        console.log("  1. ./.riglm/config.json5");
+        console.log("  2. ~/.config/riglm/config.json5");
+        console.log("");
+
+        const shouldInit = await promptYesNo(
+          "Would you like to create a configuration file?",
+        );
+
+        if (!shouldInit) {
+          console.log("");
+          console.log("Run with -c <path> to specify a configuration file.");
+          exit(ExitCode.CONFIG_NOT_FOUND);
+        }
+
+        const choice = await promptChoice(
+          "Where would you like to create it?",
+          ["./.riglm/ (project scope)", "~/.config/riglm/ (user scope)"],
+        );
+
+        const location = getDefaultConfigLocation(choice === 0);
+
+        if (!createConfig(location)) {
+          exit(ExitCode.RUNTIME_ERROR);
+        }
+
+        config.configPath = location.configPath;
+      }
+
+      const appConfig = loadConfigFile(config.configPath);
+      if (!appConfig) {
+        console.error(
+          `Failed to load configuration from: ${config.configPath}`,
+        );
+        exit(ExitCode.INVALID_CONFIG);
+      }
+
+      if (config.quiet) {
+        printQuietBanner(config);
+      } else {
+        printBanner({ version, config, appConfig });
+      }
+
+      try {
+        return await bootstrap(config as ResolvedConfig & { configPath: string });
+      } catch (error) {
+        console.error(
+          "Failed to start server:",
+          error instanceof Error ? error.message : error,
+        );
+        exit(ExitCode.RUNTIME_ERROR);
+      }
+    }
+  }
+
+  return null;
 }
