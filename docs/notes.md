@@ -63,12 +63,7 @@
 
 ### High Priority
 
-1. **Test suite broken** - Chai v5 ESM compatibility issue
-   - Tests fail with: `Cannot require() ES Module chai.js`
-   - Need to either downgrade chai or migrate to ESM imports
-   - Workaround: Skip tests for now, fix before Phase 2
-
-2. **No runtime config reload** - Config only loaded at startup
+1. **No runtime config reload** - Config only loaded at startup
    - `ConfigManager.reload()` exists but not wired to signal
    - Need to implement for dynamic extension management
 

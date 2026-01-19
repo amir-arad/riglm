@@ -476,8 +476,7 @@ Expand-Archive riglm.zip -DestinationPath .
 ```
 riglm/
 ├── src/                    # Express backend (hexagonal architecture)
-│   ├── index.ts            # Entry point (wires adapters)
-│   ├── server.ts           # RiglmServer (Express app)
+│   ├── index.ts            # Entry point
 │   ├── ports/              # Abstract interfaces (contracts)
 │   ├── domain/             # Pure business logic (filter, types, config)
 │   ├── adapters/           # Concrete implementations
@@ -485,9 +484,9 @@ riglm/
 │   │   ├── logging/        # Winston adapter
 │   │   ├── storage/        # File config adapter
 │   │   └── mcp/            # MCP client/server adapters
-│   ├── application/        # Services (hosts, backend)
-│   ├── host-gateway/       # Transport session manager
-│   └── etc/                # Utilities
+│   ├── application/        # Services (riglm-server, hosts, backend, transport-session-manager)
+│   ├── cli/                # CLI commands and argument parsing
+│   └── etc/                # Utilities (closeable, env)
 ├── test/                   # Unit and E2E tests
 ├── e2e-ui/                 # Playwright UI tests
 ├── public/                 # Static web UI (vanilla HTML/CSS/JS)

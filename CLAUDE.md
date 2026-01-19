@@ -31,7 +31,9 @@ riglm/
 │   ├── ports/       # Abstract interfaces
 │   ├── domain/      # Business logic
 │   ├── adapters/    # Implementations
-│   └── application/ # Services
+│   ├── application/ # Services (riglm-server, hosts, backend, transport-session-manager)
+│   ├── cli/         # CLI commands and argument parsing
+│   └── etc/         # Utilities (closeable, env)
 ├── test/            # Unit and E2E tests
 ├── e2e-ui/          # Playwright UI tests
 ├── public/          # Static Web UI (vanilla HTML/CSS/JS)
@@ -44,7 +46,7 @@ riglm/
 - **Runtime:** Bun 1.x
 - **Language:** TypeScript 5.3 (Strict)
 - **Framework:** Express 5.1
-- **Validation:** Zod 3.22
+- **Validation:** Zod 4.x
 - **MCP SDK:** @modelcontextprotocol/sdk 1.12
 - **Testing:** Bun test runner
 - **Config:** JSON5

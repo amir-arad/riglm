@@ -192,8 +192,7 @@ src/web/
 ```
 riglm/                            # Flattened monorepo (no server/ or client/ subdirs)
 ├── src/
-│   ├── index.ts                  # Entry point (wires adapters)
-│   ├── server.ts                 # RiglmServer (Express app)
+│   ├── index.ts                  # Entry point
 │   ├── embedded-assets.ts        # Standalone binary asset embedding
 │   │
 │   ├── ports/                    # Interface contracts ✅
@@ -204,7 +203,6 @@ riglm/                            # Flattened monorepo (no server/ or client/ su
 │   │   └── transport.port.ts
 │   │
 │   ├── domain/                   # Pure business logic ✅
-│   │   ├── types.ts
 │   │   ├── error.ts
 │   │   ├── filter-engine.ts
 │   │   ├── config-resolver.ts
@@ -217,20 +215,25 @@ riglm/                            # Flattened monorepo (no server/ or client/ su
 │   │   └── mcp/                  # MCP client/server adapters
 │   │
 │   ├── application/              # Services ✅
+│   │   ├── riglm-server.ts       # RiglmServer (Express app)
 │   │   ├── hosts.service.ts      # Modified in Phase 2
-│   │   └── backend.service.ts
+│   │   ├── backend.service.ts
+│   │   ├── config.service.ts
+│   │   ├── transport-session-manager.ts
+│   │   └── bootstrap.ts
 │   │
 │   ├── api/                      # Phase 3 (planned)
 │   │   └── websocket.controller.ts
 │   │
-│   ├── host-gateway/             # Session management ✅
-│   │   └── transport-session-manager.ts
-│   │
 │   ├── cli/                      # CLI commands ✅
+│   │   ├── index.ts
+│   │   ├── parse-args.ts
+│   │   ├── config/
+│   │   └── output/
 │   │
 │   └── etc/                      # Utilities ✅
 │       ├── env.ts
-│       └── service.ts
+│       └── closeable.ts
 │
 ├── public/                       # Vanilla Web UI (HTML/CSS/JS) ✅
 │   ├── index.html
