@@ -1,5 +1,3 @@
-
-
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   HttpServerTransportPort,
@@ -8,21 +6,18 @@ import {
   HttpResponsePort,
 } from "../../../ports/transport.port";
 
-
 export class HttpServerTransportAdapter implements HttpServerTransportPort {
   private transport: StreamableHTTPServerTransport;
   private _sessionId: string;
 
   constructor(options: HttpServerTransportOptions) {
-    
-    
     this._sessionId =
       options.sessionIdGenerator?.() ??
       `http-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
     this.transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => this._sessionId,
-      
+
       enableJsonResponse: true,
       onsessioninitialized: (sessionId: string) => {
         options.onsessioninitialized?.(sessionId);
@@ -34,15 +29,15 @@ export class HttpServerTransportAdapter implements HttpServerTransportPort {
     return this._sessionId;
   }
 
-  async handleRequest(req: HttpRequestPort, res: HttpResponsePort, body?: unknown): Promise<void> {
-    
-    
+  async handleRequest(
+    req: HttpRequestPort,
+    res: HttpResponsePort,
+    body?: unknown,
+  ): Promise<void> {
     await this.transport.handleRequest(req as never, res as never, body);
   }
 
-  async start(): Promise<void> {
-    
-  }
+  async start(): Promise<void> {}
 
   async close(): Promise<void> {
     await this.transport.close();
@@ -64,7 +59,6 @@ export class HttpServerTransportAdapter implements HttpServerTransportPort {
     return this.transport.onclose;
   }
 
-  
   getSdkTransport(): StreamableHTTPServerTransport {
     return this.transport;
   }

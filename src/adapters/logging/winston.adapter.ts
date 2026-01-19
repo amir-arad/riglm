@@ -1,10 +1,7 @@
-
-
 import winston from "winston";
 import path from "path";
 import fs from "fs";
 import { LoggerPort } from "../../ports/logger.port";
-
 
 export class WinstonLoggerAdapter implements LoggerPort {
   constructor(private winstonLogger: winston.Logger) {}
@@ -30,20 +27,14 @@ export class WinstonLoggerAdapter implements LoggerPort {
   }
 }
 
-
-
-
-
-
 export interface LoggerEnvConfig {
   logLevel: string;
   isProduction: boolean;
-  
+
   logFormat?: "pretty" | "json";
-  
+
   logFile?: string;
 }
-
 
 function ensureDataDirectory(): string {
   const dataDir = path.join(process.cwd(), "data");
@@ -53,33 +44,28 @@ function ensureDataDirectory(): string {
   return dataDir;
 }
 
-
 function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
   const dataDir = ensureDataDirectory();
   const logFormat = env.logFormat ?? "pretty";
 
-  
   const consoleLogLevel = env.isProduction ? "info" : env.logLevel;
 
-  
   const fileLogLevel =
     env.logLevel === "silly" || env.logLevel === "verbose"
       ? "debug"
       : env.logLevel;
 
-  
   const consoleFormat =
     logFormat === "json"
       ? winston.format.combine(
           winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
           winston.format.errors({ stack: true }),
-          winston.format.json()
+          winston.format.json(),
         )
       : winston.format.combine(
           winston.format.colorize(),
           winston.format.printf(
             ({ timestamp, level, message, service, ...meta }) => {
-              
               if (env.isProduction) {
                 return `${service}|${level}: ${message}`;
               } else {
@@ -88,8 +74,8 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
                   : "";
                 return `${service}|${level} ${timestamp}: ${message} ${metaString}`;
               }
-            }
-          )
+            },
+          ),
         );
 
   const logger = winston.createLogger({
@@ -97,11 +83,10 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
     format: winston.format.combine(
       winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
       winston.format.errors({ stack: true }),
-      winston.format.json()
+      winston.format.json(),
     ),
     defaultMeta: { service: "ROOT" },
     transports: [
-      
       new winston.transports.Console({
         level: consoleLogLevel,
         format: consoleFormat,
@@ -109,9 +94,7 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
     ],
   });
 
-  
   if (env.isProduction || process.env.ENABLE_FILE_LOGGING === "true") {
-    
     logger.add(
       new winston.transports.File({
         filename: path.join(dataDir, "error.log"),
@@ -119,14 +102,13 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
         format: winston.format.combine(
           winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
           winston.format.errors({ stack: true }),
-          winston.format.json()
+          winston.format.json(),
         ),
-        maxsize: 10 * 1024 * 1024, 
+        maxsize: 10 * 1024 * 1024,
         maxFiles: 5,
-      })
+      }),
     );
 
-    
     logger.add(
       new winston.transports.File({
         filename: path.join(dataDir, "app.log"),
@@ -134,14 +116,13 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
         format: winston.format.combine(
           winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
           winston.format.errors({ stack: true }),
-          winston.format.json()
+          winston.format.json(),
         ),
-        maxsize: 20 * 1024 * 1024, 
+        maxsize: 20 * 1024 * 1024,
         maxFiles: 3,
-      })
+      }),
     );
 
-    
     if (!env.isProduction || process.env.ENABLE_DEBUG_LOGGING === "true") {
       logger.add(
         new winston.transports.File({
@@ -150,18 +131,16 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
           format: winston.format.combine(
             winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
             winston.format.errors({ stack: true }),
-            winston.format.prettyPrint()
+            winston.format.prettyPrint(),
           ),
-          maxsize: 5 * 1024 * 1024, 
+          maxsize: 5 * 1024 * 1024,
           maxFiles: 2,
-        })
+        }),
       );
     }
   }
 
-  
   if (env.logFile) {
-    
     const logDir = path.dirname(env.logFile);
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
@@ -174,17 +153,16 @@ function createWinstonLogger(env: LoggerEnvConfig): winston.Logger {
         format: winston.format.combine(
           winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
           winston.format.errors({ stack: true }),
-          winston.format.json()
+          winston.format.json(),
         ),
-        maxsize: 50 * 1024 * 1024, 
+        maxsize: 50 * 1024 * 1024,
         maxFiles: 5,
-      })
+      }),
     );
   }
 
   return logger;
 }
-
 
 export function createWinstonLoggerAdapter(env: LoggerEnvConfig): LoggerPort {
   const winstonLogger = createWinstonLogger(env);

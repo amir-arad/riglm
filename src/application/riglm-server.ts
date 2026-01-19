@@ -1,46 +1,40 @@
+import { ClientTransportFactory, ServerTransportFactory } from "../ports/transport.port";
+import { ConfigService, createConfigService } from "./config.service";
+import {
+  EmbeddedAssetsMap,
+  createEmbeddedAssetsMiddleware,
+  isStandaloneMode,
+  loadEmbeddedAssets,
+} from "../embedded-assets";
+import { HostsService, createHostsServiceFactory } from "./hosts.service";
+import {
+  SessionBackendsFactory,
+  createSessionBackendFactory,
+} from "./backend.service";
+import {
+  errorHandler,
+  notFoundHandler,
+} from "../adapters/http/error.middleware";
 
-
-import express from "express";
-import helmet from "helmet";
-import { Server } from "http";
-import morgan from "morgan";
-import { join } from "path";
 import { ConfiguratorPort } from "../ports/config-storage.port";
 import { LoggerPort } from "../ports/logger.port";
 import { McpClientFactory } from "../ports/mcp-client.port";
 import { McpServerFactory } from "../ports/mcp-server.port";
-import { ClientTransportFactory, ServerTransportFactory } from "../ports/transport.port";
-import { errorHandler, notFoundHandler } from "../adapters/http/error.middleware";
-import { makeManagementRoutes } from "../adapters/http/management.routes";
-import { ServerTransportFactoryAdapter } from "../adapters/mcp/transports/transport-factory.adapter";
-import { Services } from "../etc/service";
+import { Server } from "http";
+import { CloseablePool } from "../etc/service";
+import express from "express";
+import helmet from "helmet";
+import { join } from "path";
 import { makeHostsRoutes } from "../adapters/http/routes";
-import { ConfigService, createConfigService } from "./config.service";
-import {
-  createSessionBackendFactory,
-  SessionBackendsFactory,
-} from "./backend.service";
-import {
-  createHostsServiceFactory,
-  HostsService,
-} from "./hosts.service";
-import {
-  isStandaloneMode,
-  loadEmbeddedAssets,
-  createEmbeddedAssetsMiddleware,
-  EmbeddedAssetsMap,
-} from "../embedded-assets";
-
-
-
-
-
+import { makeManagementRoutes } from "../adapters/http/management.routes";
+import morgan from "morgan";
 
 export interface ServerDeps {
   config: ConfiguratorPort;
   clientFactory: McpClientFactory;
   serverFactory: McpServerFactory;
-  transportFactory: ClientTransportFactory;
+  clientTransportFactory: ClientTransportFactory;
+  serverTransportFactory: ServerTransportFactory;
   logger: LoggerPort;
   env: {
     port: number;
@@ -51,32 +45,33 @@ export interface ServerDeps {
   };
 }
 
-
-
-
-
-
 export class RiglmServer {
   private httpServer: Server | null = null;
   port: number | null = null;
-  private hostsServices: Services<HostsService> | null = null;
+  private hostsServices: CloseablePool<HostsService> | null = null;
   private sessionBackends: SessionBackendsFactory | null = null;
   private configService: ConfigService | null = null;
 
-  constructor(private deps: ServerDeps) {}
+  constructor(private deps: ServerDeps) { }
 
   async start() {
-    const { config, clientFactory, serverFactory, transportFactory, logger, env } = this.deps;
+    const {
+      config,
+      clientFactory,
+      serverFactory,
+      clientTransportFactory,
+      serverTransportFactory,
+      logger,
+      env,
+    } = this.deps;
 
-    
     this.sessionBackends = createSessionBackendFactory({
       clientFactory,
-      transportFactory,
+      transportFactory: clientTransportFactory,
       config,
       logger,
     });
 
-    
     this.hostsServices = createHostsServiceFactory({
       serverFactory,
       config,
@@ -84,27 +79,25 @@ export class RiglmServer {
       sessionBackends: this.sessionBackends,
     });
 
-    
-    
-    
     this.configService = createConfigService({
       config,
       logger,
     });
 
-    
     const app = express();
-    
-    app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrcAttr: ["'unsafe-inline'"], 
-          styleSrc: ["'self'", "'unsafe-inline'"],
+
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrcAttr: ["'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+          },
         },
-      },
-    }));
+      }),
+    );
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
     app.use(
@@ -114,15 +107,12 @@ export class RiglmServer {
             logger.info(message.trim());
           },
         },
-      })
+      }),
     );
 
-    
     const enableUi = env.enableUi ?? true;
     const enableApi = env.enableApi ?? true;
 
-    
-    
     if (enableUi) {
       const standalone = isStandaloneMode();
       if (standalone) {
@@ -130,7 +120,11 @@ export class RiglmServer {
         logger.info("Running in standalone mode with embedded assets", {
           assetCount: embeddedAssets.size,
         });
-        app.use(createEmbeddedAssetsMiddleware(embeddedAssets) as express.RequestHandler);
+        app.use(
+          createEmbeddedAssetsMiddleware(
+            embeddedAssets,
+          ) as express.RequestHandler,
+        );
       } else {
         const clientPath = join(__dirname, "../../public");
         logger.debug("Serving static files from filesystem", { clientPath });
@@ -140,20 +134,18 @@ export class RiglmServer {
       logger.info("Web UI disabled");
     }
 
-    
     if (enableApi) {
       app.use("/api", makeManagementRoutes(this.configService, logger));
     } else {
       logger.info("Management API disabled");
     }
 
-    
-    const serverTransportFactory: ServerTransportFactory = new ServerTransportFactoryAdapter();
-    app.use(makeHostsRoutes(this.hostsServices, serverTransportFactory, logger));
+    app.use(
+      makeHostsRoutes(this.hostsServices, serverTransportFactory, logger),
+    );
     app.use(notFoundHandler);
     app.use(errorHandler(env.isProduction, logger));
 
-    
     this.port = await new Promise<number>((resolve, reject) => {
       const { port, host = "0.0.0.0" } = env;
       this.httpServer = app.listen(port, host, () => {

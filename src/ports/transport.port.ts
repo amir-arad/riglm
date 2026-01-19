@@ -1,33 +1,18 @@
-
-
-
 export interface TransportPort {
-  
   readonly sessionId: string;
 
-  
   start(): Promise<void>;
 
-  
   close(): Promise<void>;
 
-  
   onerror?: (error: Error) => void;
 
-  
   onclose?: () => void;
 }
 
-
 export interface SdkTransportPort extends TransportPort {
-  
   getSdkTransport(): unknown;
 }
-
-
-
-
-
 
 export interface StdioTransportConfig {
   command: string;
@@ -36,13 +21,11 @@ export interface StdioTransportConfig {
   signal?: AbortSignal;
 }
 
-
 export interface SseTransportConfig {
   url: string;
   headers?: Record<string, string>;
   signal?: AbortSignal;
 }
-
 
 export interface HttpTransportConfig {
   url: string;
@@ -50,18 +33,12 @@ export interface HttpTransportConfig {
   signal?: AbortSignal;
 }
 
-
-
-
-
-
 export interface HttpRequestPort {
   method: string;
   headers: Record<string, string | string[] | undefined>;
   body?: unknown;
   url?: string;
 }
-
 
 export interface HttpResponsePort {
   writeHead(statusCode: number, headers?: Record<string, string>): void;
@@ -71,38 +48,27 @@ export interface HttpResponsePort {
   headersSent: boolean;
 }
 
-
 export interface HttpServerTransportOptions {
   sessionIdGenerator?: () => string;
   onsessioninitialized?: (sessionId: string) => void;
 }
 
-
 export interface HttpServerTransportPort extends SdkTransportPort {
-  
-  handleRequest(req: HttpRequestPort, res: HttpResponsePort, body?: unknown): Promise<void>;
+  handleRequest(
+    req: HttpRequestPort,
+    res: HttpResponsePort,
+    body?: unknown,
+  ): Promise<void>;
 }
 
-
-
-
-
-
 export interface ClientTransportFactory {
-  
   createStdioTransport(config: StdioTransportConfig): TransportPort;
 
-  
   createSseTransport(config: SseTransportConfig): TransportPort;
 
-  
   createHttpTransport(config: HttpTransportConfig): TransportPort;
 }
 
-
-export interface ServerTransportFactory {
-  
-  createHttpServerTransport(options: HttpServerTransportOptions): HttpServerTransportPort;
-}
-
-
+export type ServerTransportFactory = (
+  options: HttpServerTransportOptions,
+) => HttpServerTransportPort;

@@ -1,18 +1,13 @@
-
-
 import { IncomingMessage, ServerResponse } from "http";
 
 import { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { SdkTransportPort } from "../../../ports/transport.port";
 
-
 export class SseServerTransportAdapter implements SdkTransportPort {
   private transport: SSEServerTransport;
 
-  
   constructor(messagePath: string, response: ServerResponse) {
-    
     this.transport = new SSEServerTransport(messagePath, response);
   }
 
@@ -44,16 +39,16 @@ export class SseServerTransportAdapter implements SdkTransportPort {
     return this.transport.onclose;
   }
 
-  
   async handlePostMessage(
     req: IncomingMessage & {
       auth?: AuthInfo;
-    }, res: ServerResponse, body: unknown
+    },
+    res: ServerResponse,
+    body: unknown,
   ): Promise<void> {
     await this.transport.handlePostMessage(req, res, body);
   }
 
-  
   getSdkTransport(): SSEServerTransport {
     return this.transport;
   }

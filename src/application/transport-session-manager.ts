@@ -1,7 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { TransportPort } from "../ports/transport.port";
 import type { LoggerPort } from "../ports/logger.port";
-import { closeServices, Service, ServiceOptions } from "../etc/service";
+import { closeAll, Closeable, PoolContext } from "../etc/service";
 
 export type TransportSession = ReturnType<
   TransportSessionManager["createSession"]
@@ -33,11 +33,11 @@ export class TransportSessionManager {
     this.logger.info(
       `SessionManager initialized with inactivity threshold of ${
         TRANSPORT_OPTIONS.inactivityThreshold / 1000 / 60
-      } minutes`
+      } minutes`,
     );
   }
 
-  createSession(transport: TransportPort, options?: ServiceOptions) {
+  createSession(transport: TransportPort, ctx?: PoolContext) {
     const { sessionId } = transport;
     if (!sessionId) {
       throw new Error("Transport session ID is required");
@@ -56,21 +56,23 @@ export class TransportSessionManager {
       });
     };
 
-    const services = new Map<string, Promise<Service>>([
+    const services = new Map<string, Promise<Closeable>>([
       ["transport", Promise.resolve(transport)],
     ]);
 
-    
-    if (options?.signal) {
-      options.signal.addEventListener(
+    if (ctx?.signal) {
+      ctx.signal.addEventListener(
         "abort",
         () => {
           this.logger.info(`Session ${sessionId} aborted by signal`);
           this.removeSession(sessionId).catch((error) => {
-            this.logger.error(`Error removing aborted session ${sessionId}:`, error);
+            this.logger.error(
+              `Error removing aborted session ${sessionId}:`,
+              error,
+            );
           });
         },
-        { once: true }
+        { once: true },
       );
     }
 
@@ -79,7 +81,7 @@ export class TransportSessionManager {
       transport,
       createdAt: new Date(),
       lastActivity: new Date(),
-      addService: (name: string, service: Promise<Service> | Service) => {
+      addService: (name: string, service: Promise<Closeable> | Closeable) => {
         if (services.has(name)) {
           this.logger.warn(`Service ${name} exists for session ${sessionId}`);
           return;
@@ -91,7 +93,7 @@ export class TransportSessionManager {
         try {
           delete transport.onerror;
           delete transport.onclose;
-          await closeServices(services.entries(), this.logger);
+          await closeAll(services.entries(), this.logger);
           this.sessions.delete(sessionId);
           this.logger.info(`Successfully closed session ${sessionId}`);
         } catch (error) {
@@ -157,7 +159,7 @@ export class TransportSessionManager {
         const inactiveTime = now.getTime() - session.lastActivity.getTime();
         if (inactiveTime > TRANSPORT_OPTIONS.inactivityThreshold) {
           this.logger.info(
-            `Session ${sessionId} inactive for ${inactiveTime / 1000 / 60} minutes, removing`
+            `Session ${sessionId} inactive for ${inactiveTime / 1000 / 60} minutes, removing`,
           );
           try {
             await this.removeSession(sessionId);
@@ -166,7 +168,7 @@ export class TransportSessionManager {
             status.errors.push({ sessionId, error: error as Error });
             this.logger.error(
               `Error during cleanup of session ${sessionId}:`,
-              error
+              error,
             );
           }
         }
@@ -175,7 +177,7 @@ export class TransportSessionManager {
       status.remainingSessions = this.sessions.size;
       if (status.sessionsRemoved > 0) {
         this.logger.info(
-          `Cleaned up ${status.sessionsRemoved} inactive sessions. Active sessions: ${status.remainingSessions}`
+          `Cleaned up ${status.sessionsRemoved} inactive sessions. Active sessions: ${status.remainingSessions}`,
         );
       }
     } finally {
@@ -186,7 +188,9 @@ export class TransportSessionManager {
   }
 
   async cleanup(): Promise<void> {
-    this.logger.info("Starting comprehensive cleanup of TransportSessionManager");
+    this.logger.info(
+      "Starting comprehensive cleanup of TransportSessionManager",
+    );
 
     try {
       if (this.intervalId) {
@@ -211,15 +215,17 @@ export class TransportSessionManager {
             } catch (error) {
               this.logger.error(
                 `Error closing session ${session.sessionId}:`,
-                error
+                error,
               );
             }
-          })
+          }),
         );
       }
 
       this.sessions.clear();
-      this.logger.info("TransportSessionManager cleanup completed successfully");
+      this.logger.info(
+        "TransportSessionManager cleanup completed successfully",
+      );
     } catch (error) {
       this.logger.error("Error during TransportSessionManager cleanup:", error);
       throw error;
@@ -228,7 +234,6 @@ export class TransportSessionManager {
     }
   }
 
-  
   async close(): Promise<void> {
     await this.cleanup();
   }

@@ -1,8 +1,8 @@
-
-
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { SdkTransportPort, SseTransportConfig } from "../../../ports/transport.port";
-
+import {
+  SdkTransportPort,
+  SseTransportConfig,
+} from "../../../ports/transport.port";
 
 export class SseClientTransportAdapter implements SdkTransportPort {
   private transport: SSEClientTransport;
@@ -29,7 +29,6 @@ export class SseClientTransportAdapter implements SdkTransportPort {
       },
     });
 
-    
     this._sessionId = `sse-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
@@ -61,7 +60,6 @@ export class SseClientTransportAdapter implements SdkTransportPort {
     return this.transport.onclose;
   }
 
-  
   getSdkTransport(): SSEClientTransport {
     return this.transport;
   }

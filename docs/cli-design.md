@@ -41,8 +41,6 @@ If no command is specified, `serve` is assumed.
 | `--no-api` | | `RIGLM_DISABLE_API=1` | (enabled) | Disable REST management API |
 | `--quiet` | `-q` | | | Suppress startup banner and non-error output |
 | `--verbose` | `-v` | | | Shorthand for `--log-level=debug` |
-| `--watch` | `-w` | `RIGLM_WATCH=1` | (disabled) | Hot-reload on config file changes |
-| `--dry-run` | | | | Validate config and print effective settings, then exit |
 
 *Config auto-detection (fixed locations, checked in order):
 1. `./.riglm/config.json5` (local override)
@@ -92,9 +90,6 @@ riglm serve -q --log-format=json --log-level=warn
 
 # Headless mode - MCP endpoints only, no UI or API
 riglm serve --no-ui --no-api
-
-# Dry run - validate and show effective config
-riglm serve --dry-run
 
 # Bind to localhost only (for security)
 riglm serve -H 127.0.0.1
@@ -288,8 +283,6 @@ Options (serve):
       --no-api             Disable REST management API
   -q, --quiet              Suppress startup banner
   -v, --verbose            Enable debug logging
-  -w, --watch              Hot-reload on config changes
-      --dry-run            Validate config and exit
 
 Examples:
   riglm                            # Start with defaults
@@ -337,7 +330,6 @@ interface ResolvedConfig {
   logFile?: string;
   enableUi: boolean;
   enableApi: boolean;
-  watch: boolean;
 }
 
 function resolveConfig(cli: CliArgs, env: NodeJS.ProcessEnv): ResolvedConfig {
@@ -350,7 +342,6 @@ function resolveConfig(cli: CliArgs, env: NodeJS.ProcessEnv): ResolvedConfig {
     logFile: cli.logFile ?? env.RIGLM_LOG_FILE,
     enableUi: !cli.noUi && env.RIGLM_DISABLE_UI !== '1',
     enableApi: !cli.noApi && env.RIGLM_DISABLE_API !== '1',
-    watch: cli.watch ?? env.RIGLM_WATCH === '1',
   };
 }
 ```

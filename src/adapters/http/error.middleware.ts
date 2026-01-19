@@ -1,4 +1,3 @@
-
 import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../../domain/error";
 import type { LoggerPort } from "../../ports/logger.port";
@@ -6,7 +5,7 @@ import type { LoggerPort } from "../../ports/logger.port";
 export function notFoundHandler(
   _req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ): void {
   res.status(404).json({ error: "Endpoint not found" });
 }
@@ -29,7 +28,7 @@ export const errorHandler =
     if (!(error instanceof ApiError)) {
       statusCode = 500;
       error = ApiError.internal(
-        isProduction ? "Internal Server Error" : error.message
+        isProduction ? "Internal Server Error" : error.message,
       );
     } else {
       statusCode = error.statusCode;
@@ -48,7 +47,6 @@ export const errorHandler =
       });
     }
 
-    
     res.status(statusCode).json({
       status: "error",
       message: error.message,

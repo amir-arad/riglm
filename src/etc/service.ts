@@ -1,90 +1,84 @@
 import type { LoggerPort } from "../ports/logger.port";
 
-
-export interface ServiceOptions {
+export interface PoolContext {
   logger?: LoggerPort;
-  
+
   signal?: AbortSignal;
 }
 
-
-export type Service = {
-  
+export type Closeable = {
   close: (this: unknown) => Promise<unknown>;
 };
 
-export function closeServices(
-  services: Iterable<[string, Promise<Service> | Service]>,
-  logger?: LoggerPort
+export function closeAll(
+  services: Iterable<[string, Promise<Closeable> | Closeable]>,
+  logger?: LoggerPort,
 ) {
   return Promise.all(
-    [...services].map(([name, ep]) =>
-      Promise.resolve(ep).then((e) =>
-        e.close().catch((error) => {
+    [...services].map(([name, serviceOrPromise]) =>
+      Promise.resolve(serviceOrPromise).then((service) =>
+        service.close().catch((error) => {
           logger?.error("Error closing service: " + name, error);
-        })
-      )
-    )
+        }),
+      ),
+    ),
   );
 }
 
-export function makeServicesContainer<T extends Service>(
-  factory: (id: string, options?: ServiceOptions) => Promise<T>,
+export function createCloseablePool<T extends Closeable>(
+  factory: (id: string, ctx?: PoolContext) => Promise<T>,
   serviceName: string,
-  logger?: LoggerPort
+  logger?: LoggerPort,
 ) {
   const services = new Map<string, Promise<T>>();
   return {
-    get: (id: string, options?: ServiceOptions) => {
+    get: (id: string, ctx?: PoolContext) => {
       if (!services.has(id)) {
-        
-        if (options?.signal?.aborted) {
+        if (ctx?.signal?.aborted) {
           return Promise.reject(new Error("AbortSignal is already aborted"));
         }
 
-        const sp = factory(id, options).then((s) => {
-          const orig_close = s.close;
-          s.close = () => {
-            if (services.get(id) === sp) {
+        const servicePromise = factory(id, ctx).then((service) => {
+          const originalClose = service.close;
+          service.close = () => {
+            if (services.get(id) === servicePromise) {
               services.delete(id);
             }
-            return orig_close();
+            return originalClose();
           };
 
-          
-          if (options?.signal) {
-            options.signal.addEventListener(
+          if (ctx?.signal) {
+            ctx.signal.addEventListener(
               "abort",
               () => {
                 logger?.info(`${serviceName} service aborted: ${id}`);
-                s.close().catch((error) => {
+                service.close().catch((error) => {
                   logger?.error(
                     `Error closing aborted service ${serviceName}: ${id}`,
-                    error
+                    error,
                   );
                 });
               },
-              { once: true }
+              { once: true },
             );
           }
 
           logger?.info(`${serviceName} service created: ${id}`);
-          return s;
+          return service;
         });
 
-        services.set(id, sp);
-        sp.catch((error) => {
+        services.set(id, servicePromise);
+        servicePromise.catch((error) => {
           logger?.error(`Error creating ${serviceName} service: ${id}`, error);
           services.delete(id);
         });
       }
       return services.get(id)!;
     },
-    close: () => closeServices(services.entries(), logger),
+    close: () => closeAll(services.entries(), logger),
   };
 }
 
-
-export type Services<T extends Service> = ReturnType<
-  typeof makeServicesContainer<T>
+export type CloseablePool<T extends Closeable> = ReturnType<
+  typeof createCloseablePool<T>
 >;

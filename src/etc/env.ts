@@ -1,13 +1,9 @@
-
-
 import path from "path";
-
 
 function isTruthy(value: string | undefined): boolean {
   if (!value) return false;
   return ["1", "true", "yes", "on"].includes(value.toLowerCase());
 }
-
 
 function getConfigPath(): string {
   return (
@@ -17,18 +13,15 @@ function getConfigPath(): string {
   );
 }
 
-
 function getPort(): number {
   const portStr = process.env.RIGLM_PORT || process.env.PORT || "3000";
   const port = parseInt(portStr, 10);
   return isNaN(port) ? 3000 : port;
 }
 
-
 function getLogLevel(): string {
   return process.env.RIGLM_LOG_LEVEL || process.env.LOG_LEVEL || "info";
 }
-
 
 export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
@@ -41,7 +34,6 @@ export const env = {
   isProduction: process.env.NODE_ENV === "production",
   enableUi: !isTruthy(process.env.RIGLM_DISABLE_UI),
   enableApi: !isTruthy(process.env.RIGLM_DISABLE_API),
-  watch: isTruthy(process.env.RIGLM_WATCH),
 } satisfies Arguments;
 
 export type Arguments = {
@@ -55,5 +47,4 @@ export type Arguments = {
   isProduction: boolean;
   enableUi: boolean;
   enableApi: boolean;
-  watch: boolean;
 };

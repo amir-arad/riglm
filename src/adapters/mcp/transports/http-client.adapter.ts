@@ -1,8 +1,8 @@
-
-
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { SdkTransportPort, HttpTransportConfig } from "../../../ports/transport.port";
-
+import {
+  SdkTransportPort,
+  HttpTransportConfig,
+} from "../../../ports/transport.port";
 
 export class HttpClientTransportAdapter implements SdkTransportPort {
   private transport: StreamableHTTPClientTransport;
@@ -20,7 +20,6 @@ export class HttpClientTransportAdapter implements SdkTransportPort {
         }),
     });
 
-    
     this._sessionId = `http-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
@@ -52,7 +51,6 @@ export class HttpClientTransportAdapter implements SdkTransportPort {
     return this.transport.onclose;
   }
 
-  
   getSdkTransport(): StreamableHTTPClientTransport {
     return this.transport;
   }

@@ -1,8 +1,8 @@
-
-
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { SdkTransportPort, StdioTransportConfig } from "../../../ports/transport.port";
-
+import {
+  SdkTransportPort,
+  StdioTransportConfig,
+} from "../../../ports/transport.port";
 
 export class StdioClientTransportAdapter implements SdkTransportPort {
   private transport: StdioClientTransport;
@@ -13,18 +13,16 @@ export class StdioClientTransportAdapter implements SdkTransportPort {
       command: config.command,
       args: config.args,
       env: {
-        
         ...Object.fromEntries(
           Object.entries(process.env)
             .filter(([_, v]) => v !== undefined)
-            .map(([k, v]) => [k, v as string])
+            .map(([k, v]) => [k, v as string]),
         ),
-        
+
         ...config.env,
       },
     });
 
-    
     this._sessionId = `stdio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
@@ -56,7 +54,6 @@ export class StdioClientTransportAdapter implements SdkTransportPort {
     return this.transport.onclose;
   }
 
-  
   getSdkTransport(): StdioClientTransport {
     return this.transport;
   }

@@ -1,7 +1,6 @@
 import { ExitCode } from "./cli/output/exit-codes";
-import type { ServerRuntime } from "./cli/commands/serve.command";
 import { parseArgs } from "./cli/parse-args";
-import { runCli } from "./cli";
+import { runCli, type ServerRuntime } from "./cli";
 
 let runtime: ServerRuntime | null = null;
 
@@ -41,6 +40,9 @@ runCli(parseArgs(process.argv.slice(2)))
     runtime = r;
   })
   .catch((error) => {
-    console.error("Fatal error:", error instanceof Error ? error.message : error);
+    console.error(
+      "Fatal error:",
+      error instanceof Error ? error.message : error,
+    );
     process.exit(ExitCode.RUNTIME_ERROR);
   });

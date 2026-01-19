@@ -1,14 +1,6 @@
-
-
 import { FilterEngine } from "./filter-engine";
 
-
-
-
-
-
 export type JsonSchema = Record<string, unknown>;
-
 
 export interface ToolDefinition {
   name: string;
@@ -16,12 +8,10 @@ export interface ToolDefinition {
   inputSchema: JsonSchema;
 }
 
-
 export interface ToolResponse {
   content: ToolContent[];
   isError?: boolean;
 }
-
 
 export type ToolContent =
   | TextContent
@@ -29,12 +19,10 @@ export type ToolContent =
   | AudioContent
   | ResourceContent;
 
-
 export interface TextContent {
   type: "text";
   text: string;
 }
-
 
 export interface ImageContent {
   type: "image";
@@ -42,13 +30,11 @@ export interface ImageContent {
   mimeType: string;
 }
 
-
 export interface AudioContent {
   type: "audio";
   data: string;
   mimeType: string;
 }
-
 
 export interface ResourceContent {
   type: "resource";
@@ -59,24 +45,15 @@ export interface ResourceContent {
   };
 }
 
-
 export type ToolHandler = (
-  args: Record<string, unknown> | undefined
+  args: Record<string, unknown> | undefined,
 ) => Promise<ToolResponse>;
 
-
-
-
-
-
 export class ToolAggregator {
-  
   static namespace(serverName: string, toolName: string): string {
-    
     return `${serverName.replace(/-/g, "")}-${toolName}`;
   }
 
-  
   static parseNamespacedName(namespacedName: string): {
     serverName: string;
     toolName: string;
@@ -92,13 +69,12 @@ export class ToolAggregator {
     };
   }
 
-  
   static aggregateTools(
     servers: Array<{
       serverName: string;
       tools: ToolDefinition[];
       filterEngine: FilterEngine;
-    }>
+    }>,
   ): ToolDefinition[] {
     const aggregated: ToolDefinition[] = [];
 
@@ -106,7 +82,6 @@ export class ToolAggregator {
       for (const tool of tools) {
         const namespacedName = this.namespace(serverName, tool.name);
 
-        
         if (filterEngine.shouldFilter(namespacedName)) {
           continue;
         }
@@ -122,15 +97,20 @@ export class ToolAggregator {
     return aggregated;
   }
 
-  
   static buildToolHandlers<T>(
     servers: Array<{
       serverName: string;
       tools: ToolDefinition[];
-      callTool: (toolName: string, args?: Record<string, unknown>) => Promise<T>;
-    }>
+      callTool: (
+        toolName: string,
+        args?: Record<string, unknown>,
+      ) => Promise<T>;
+    }>,
   ): Map<string, (args?: Record<string, unknown>) => Promise<T>> {
-    const handlers = new Map<string, (args?: Record<string, unknown>) => Promise<T>>();
+    const handlers = new Map<
+      string,
+      (args?: Record<string, unknown>) => Promise<T>
+    >();
 
     for (const { serverName, tools, callTool } of servers) {
       for (const tool of tools) {

@@ -1,5 +1,3 @@
-
-
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -7,7 +5,6 @@ interface PackageVersionInfo {
   version: string;
   mcpSdkVersion: string;
 }
-
 
 export function getPackageVersionInfo(): PackageVersionInfo {
   const packagePath = join(import.meta.dir, "../../package.json");

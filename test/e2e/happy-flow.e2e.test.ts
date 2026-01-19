@@ -17,10 +17,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { dirname, join } from "path";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { ClientTransportFactoryAdapter } from "../../src/adapters/mcp/transports/transport-factory.adapter";
-import { McpClientFactoryAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
-import { McpServerFactoryAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { clientTransportFactory, createServerTransportAdapter } from "../../src/adapters/mcp/transports/transport-factory.adapter";
+import { createMcpClientAdapter } from "../../src/adapters/mcp/mcp-client.adapter";
+import { createMcpServerAdapter } from "../../src/adapters/mcp/mcp-server.adapter";
 import { createMockConfigStorage } from "../mocks/mock-config";
 import { mocSseServer } from "../fixtures/mock-sse-server";
 import winston from "winston";
@@ -52,9 +52,9 @@ describe("Happy Flow E2E", () => {
     child: (_meta: Record<string, unknown>) => logger,
   };
 
-  const clientFactory = new McpClientFactoryAdapter();
-  const serverFactory = new McpServerFactoryAdapter();
-  const transportFactory = new ClientTransportFactoryAdapter();
+  const clientFactory = createMcpClientAdapter;
+  const serverFactory = createMcpServerAdapter;
+  const transportFactory = clientTransportFactory;
 
   function createServerDeps(
     config: ReturnType<typeof createMockConfigStorage>,
@@ -65,7 +65,8 @@ describe("Happy Flow E2E", () => {
       config,
       clientFactory,
       serverFactory,
-      transportFactory,
+      clientTransportFactory: transportFactory,
+      serverTransportFactory: createServerTransportAdapter,
       logger,
     };
   }

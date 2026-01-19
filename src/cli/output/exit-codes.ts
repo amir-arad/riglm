@@ -1,7 +1,4 @@
-
-
 export const ExitCode = {
-
   SUCCESS: 0,
 
   INVALID_CONFIG: 1,
@@ -15,7 +12,6 @@ export const ExitCode = {
 
 // eslint-disable-next-line no-redeclare
 export type ExitCode = (typeof ExitCode)[keyof typeof ExitCode];
-
 
 export function exit(code: ExitCode): never {
   process.exit(code);
