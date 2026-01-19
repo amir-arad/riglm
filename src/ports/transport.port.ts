@@ -82,6 +82,54 @@ export interface HttpTransportConfig {
 }
 
 // ============================================================================
+// HTTP Server Transport Types
+// ============================================================================
+
+/**
+ * HTTP request abstraction (decoupled from Express)
+ */
+export interface HttpRequestPort {
+  method: string;
+  headers: Record<string, string | string[] | undefined>;
+  body?: unknown;
+  url?: string;
+}
+
+/**
+ * HTTP response abstraction (decoupled from Express)
+ */
+export interface HttpResponsePort {
+  writeHead(statusCode: number, headers?: Record<string, string>): void;
+  write(chunk: string | Buffer): boolean;
+  end(data?: string | Buffer): void;
+  setHeader(name: string, value: string | number | readonly string[]): void;
+  headersSent: boolean;
+}
+
+/**
+ * Options for creating HTTP server transport
+ */
+export interface HttpServerTransportOptions {
+  sessionIdGenerator?: () => string;
+  onsessioninitialized?: (sessionId: string) => void;
+}
+
+/**
+ * Extended transport for Streamable HTTP server
+ * Handles HTTP request/response pairs for MCP communication
+ */
+export interface HttpServerTransportPort extends SdkTransportPort {
+  /**
+   * Handle an incoming HTTP request
+   * Delegates to the underlying SDK transport
+   * @param req The HTTP request
+   * @param res The HTTP response
+   * @param body Optional pre-parsed request body (required when body has been consumed by middleware)
+   */
+  handleRequest(req: HttpRequestPort, res: HttpResponsePort, body?: unknown): Promise<void>;
+}
+
+// ============================================================================
 // Transport Factories
 // ============================================================================
 
@@ -103,6 +151,16 @@ export interface ClientTransportFactory {
    * Create an HTTP transport for remote MCP servers
    */
   createHttpTransport(config: HttpTransportConfig): TransportPort;
+}
+
+/**
+ * Factory for creating server-side transports (accepting MCP client connections)
+ */
+export interface ServerTransportFactory {
+  /**
+   * Create an HTTP server transport for Streamable HTTP protocol
+   */
+  createHttpServerTransport(options: HttpServerTransportOptions): HttpServerTransportPort;
 }
 
 

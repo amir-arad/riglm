@@ -1,5 +1,15 @@
 # Streamable HTTP Server Transport Implementation Plan
 
+**Status: COMPLETED**
+
+Implementation completed with all tests passing (179 total, including 6 new Streamable HTTP tests).
+
+Key implementation files:
+- `src/ports/transport.port.ts` - HttpServerTransportPort interface
+- `src/adapters/mcp/transports/http-server.adapter.ts` - Transport adapter
+- `src/adapters/http/routes.ts` - /mcp route handler
+- `test/e2e/streamable-http.e2e.test.ts` - E2E tests
+
 ## Overview
 
 Add Streamable HTTP server transport support to riglm, enabling MCP clients to connect using the modern protocol (2025-03-26) instead of the deprecated SSE transport.

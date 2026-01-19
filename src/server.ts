@@ -11,8 +11,9 @@ import { ConfiguratorPort } from "./ports/config-storage.port";
 import { LoggerPort } from "./ports/logger.port";
 import { McpClientFactory } from "./ports/mcp-client.port";
 import { McpServerFactory } from "./ports/mcp-server.port";
-import { ClientTransportFactory } from "./ports/transport.port";
+import { ClientTransportFactory, ServerTransportFactory } from "./ports/transport.port";
 import { errorHandler, notFoundHandler, makeManagementRoutes } from "./adapters/http";
+import { ServerTransportFactoryAdapter } from "./adapters/mcp/transports";
 import { Services } from "./etc/service";
 import { makeHostsRoutes } from "./adapters/http/routes";
 import { ConfigService, createConfigService } from "./application/config.service";
@@ -150,7 +151,8 @@ export class RiglmServer {
     }
 
     // MCP host routes
-    app.use(makeHostsRoutes(this.hostsServices, logger));
+    const serverTransportFactory: ServerTransportFactory = new ServerTransportFactoryAdapter();
+    app.use(makeHostsRoutes(this.hostsServices, serverTransportFactory, logger));
     app.use(notFoundHandler);
     app.use(errorHandler(env.isProduction, logger));
 
