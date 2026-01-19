@@ -13,7 +13,8 @@ import {
   createCloseablePool,
   CloseablePool,
   PoolContext,
-} from "../etc/service";
+} from "../etc/closeable";
+import { version } from "../cli/output/version";
 
 export interface BackendConnection {
   serverName: string;
@@ -38,91 +39,82 @@ export type SessionBackendsFactory = (
 export function createSessionBackendFactory(
   deps: BackendServiceDeps,
 ): SessionBackendsFactory {
-  return (sessionId: string, ctx?: PoolContext) =>
+  const { clientFactory, transportFactory, config, logger } = deps;
+  return (sessionId: string, sessionCtx?: PoolContext) =>
     createCloseablePool(
-      createBackendConnector(sessionId, deps, ctx),
+      async (
+        serverName: string,
+        ctx?: PoolContext,
+      ): Promise<BackendConnection> => {
+        const signal =
+          ctx?.signal && sessionCtx?.signal
+            ? AbortSignal.any([ctx.signal, sessionCtx.signal])
+            : ctx?.signal || sessionCtx?.signal;
+
+        const serverConfig = config.get().servers[serverName];
+
+        if (!serverConfig) {
+          throw new Error(`Server "${serverName}" not found in configuration`);
+        }
+
+        const transport = createTransport(
+          serverName,
+          serverConfig,
+          transportFactory,
+          logger,
+          signal,
+        );
+
+        const client = clientFactory(`riglm-bridge-${sessionId}`, version);
+
+        try {
+          logger.info(
+            `Connecting to server: ${serverName}, sessionId: ${sessionId}`,
+          );
+
+          await connectWithRetry(client, transport, serverName, logger, signal);
+
+          logger.info(
+            `Connected to server: ${serverName}, sessionId: ${sessionId}`,
+          );
+
+          const { tools } = await client.listTools({ signal });
+          logger.debug(
+            `Discovered ${tools.length} tools from ${serverName}: [${tools.map((t) => t.name).join(", ")}]`,
+          );
+
+          return {
+            serverName,
+            serverConfig,
+            client,
+            tools,
+            close: async () => {
+              try {
+                await client.close();
+                logger.info(
+                  `Closed connection to server: ${serverName}, sessionId: ${sessionId}`,
+                );
+              } catch (error) {
+                logger.error(
+                  `Error closing connection to server ${serverName}:`,
+                  error,
+                );
+              }
+            },
+          };
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown Connection Error";
+          logger.error(
+            `Error connecting to server ${serverName}:`,
+            errorMessage,
+            error,
+          );
+          throw error;
+        }
+      },
       `Backend(${sessionId})`,
     );
-}
-
-function createBackendConnector(
-  sessionId: string,
-  deps: BackendServiceDeps,
-  sessionCtx?: PoolContext,
-) {
-  const { clientFactory, transportFactory, config, logger } = deps;
-
-  return async (
-    serverName: string,
-    ctx?: PoolContext,
-  ): Promise<BackendConnection> => {
-    const signal =
-      ctx?.signal && sessionCtx?.signal
-        ? AbortSignal.any([ctx.signal, sessionCtx.signal])
-        : ctx?.signal || sessionCtx?.signal;
-
-    const serverConfig = config.get().servers[serverName];
-
-    if (!serverConfig) {
-      throw new Error(`Server "${serverName}" not found in configuration`);
-    }
-
-    const transport = createTransport(
-      serverName,
-      serverConfig,
-      transportFactory,
-      logger,
-      signal,
-    );
-
-    const client = clientFactory(`riglm-bridge-${sessionId}`, "0.0.1");
-
-    try {
-      logger.info(
-        `Connecting to server: ${serverName}, sessionId: ${sessionId}`,
-      );
-
-      await connectWithRetry(client, transport, serverName, logger, signal);
-
-      logger.info(
-        `Connected to server: ${serverName}, sessionId: ${sessionId}`,
-      );
-
-      const { tools } = await client.listTools({ signal });
-      logger.debug(
-        `Discovered ${tools.length} tools from ${serverName}: [${tools.map((t) => t.name).join(", ")}]`,
-      );
-
-      return {
-        serverName,
-        serverConfig,
-        client,
-        tools,
-        close: async () => {
-          try {
-            await client.close();
-            logger.info(
-              `Closed connection to server: ${serverName}, sessionId: ${sessionId}`,
-            );
-          } catch (error) {
-            logger.error(
-              `Error closing connection to server ${serverName}:`,
-              error,
-            );
-          }
-        },
-      };
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown Connection Error";
-      logger.error(
-        `Error connecting to server ${serverName}:`,
-        errorMessage,
-        error,
-      );
-      throw error;
-    }
-  };
 }
 
 function createTransport(

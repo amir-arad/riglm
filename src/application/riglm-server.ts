@@ -16,12 +16,12 @@ import {
   notFoundHandler,
 } from "../adapters/http/error.middleware";
 
+import { CloseablePool } from "../etc/closeable";
 import { ConfiguratorPort } from "../ports/config-storage.port";
 import { LoggerPort } from "../ports/logger.port";
 import { McpClientFactory } from "../ports/mcp-client.port";
 import { McpServerFactory } from "../ports/mcp-server.port";
 import { Server } from "http";
-import { CloseablePool } from "../etc/service";
 import express from "express";
 import helmet from "helmet";
 import { join } from "path";
@@ -48,21 +48,17 @@ export interface ServerDeps {
 export class RiglmServer {
   private httpServer: Server | null = null;
   port: number | null = null;
-  private hostsServices: CloseablePool<HostsService> | null = null;
-  private sessionBackends: SessionBackendsFactory | null = null;
-  private configService: ConfigService | null = null;
+  private hostsServices: CloseablePool<HostsService>;
+  private sessionBackends: SessionBackendsFactory;
+  private configService: ConfigService;
 
-  constructor(private deps: ServerDeps) { }
-
-  async start() {
+  constructor(private deps: ServerDeps) {
     const {
       config,
       clientFactory,
       serverFactory,
       clientTransportFactory,
-      serverTransportFactory,
       logger,
-      env,
     } = this.deps;
 
     this.sessionBackends = createSessionBackendFactory({
@@ -83,6 +79,15 @@ export class RiglmServer {
       config,
       logger,
     });
+  }
+
+  async start() {
+    const {
+      serverTransportFactory,
+      logger,
+      env,
+    } = this.deps;
+
 
     const app = express();
 

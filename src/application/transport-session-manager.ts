@@ -1,7 +1,7 @@
 import { setTimeout } from "timers/promises";
 import { TransportPort } from "../ports/transport.port";
 import type { LoggerPort } from "../ports/logger.port";
-import { closeAll, Closeable, PoolContext } from "../etc/service";
+import { closeAll, Closeable, PoolContext } from "../etc../etc/closeable
 
 export type TransportSession = ReturnType<
   TransportSessionManager["createSession"]
@@ -31,8 +31,7 @@ export class TransportSessionManager {
     }, TRANSPORT_OPTIONS.cleanupInterval);
 
     this.logger.info(
-      `SessionManager initialized with inactivity threshold of ${
-        TRANSPORT_OPTIONS.inactivityThreshold / 1000 / 60
+      `SessionManager initialized with inactivity threshold of ${TRANSPORT_OPTIONS.inactivityThreshold / 1000 / 60
       } minutes`,
     );
   }

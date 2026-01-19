@@ -1,13 +1,13 @@
-import { Request, Response, Router } from "express";
-
-import { ApiError } from "../../domain/error";
-import { HostsService } from "../../application/hosts.service";
-import type { LoggerPort } from "../../ports/logger.port";
-import { CloseablePool } from "../../etc/service";
 import {
   HttpServerTransportPort,
   ServerTransportFactory,
 } from "../../ports/transport.port";
+import { Request, Response, Router } from "express";
+
+import { ApiError } from "../../domain/error";
+import { CloseablePool } from "../../etc/closeable";
+import { HostsService } from "../../application/hosts.service";
+import type { LoggerPort } from "../../ports/logger.port";
 import { SseServerTransportAdapter } from "../mcp/transports/sse-server.adapter";
 
 export function makeHostsRoutes(
