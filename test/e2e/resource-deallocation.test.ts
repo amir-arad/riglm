@@ -111,8 +111,8 @@ describe("Resource Deallocation Tests", () => {
     await session.close();
     const duration = Date.now() - start;
 
-    // Should take at least the longest of all timeouts
-    expect(duration).toBeGreaterThanOrEqual(50 * 3);
+    // Should take at least the longest of all timeouts (with small tolerance for timer resolution)
+    expect(duration).toBeGreaterThanOrEqual(50 * 3 - 5);
     expect(sessionManager.hasSession(session.sessionId)).toBe(false);
   });
 
