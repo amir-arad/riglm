@@ -24,7 +24,7 @@ const CreateLocalServerInputSchema = z.object({
   type: z.literal("local"),
   command: z.string().min(1),
   args: z.array(z.string()).default([]),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   description: z.string().optional(),
   filters: FiltersSchema.optional(),
 });
@@ -34,7 +34,7 @@ const CreateRemoteServerInputSchema = z.object({
   id: IdentifierSchema,
   type: z.literal("remote"),
   url: z.string().min(1),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   description: z.string().optional(),
   filters: FiltersSchema.optional(),
 });
@@ -49,7 +49,7 @@ const CreateServerInputSchema = z.discriminatedUnion("type", [
 const UpdateLocalServerInputSchema = z.object({
   command: z.string().min(1).optional(),
   args: z.array(z.string()).optional(),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   description: z.string().optional(),
   filters: FiltersSchema.optional(),
 });
@@ -57,7 +57,7 @@ const UpdateLocalServerInputSchema = z.object({
 
 const UpdateRemoteServerInputSchema = z.object({
   url: z.string().min(1).optional(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   description: z.string().optional(),
   filters: FiltersSchema.optional(),
 });
@@ -177,9 +177,9 @@ export class ConfigService {
     const parsed = CreateServerInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
-        parsed.error.errors[0].message,
+        parsed.error.issues[0].message,
         "VALIDATION_ERROR",
-        parsed.error.errors
+        parsed.error.issues
       );
     }
 
@@ -232,9 +232,9 @@ export class ConfigService {
 
     if (!parsed.success) {
       throw ApiError.validation(
-        parsed.error.errors[0].message,
+        parsed.error.issues[0].message,
         "VALIDATION_ERROR",
-        parsed.error.errors
+        parsed.error.issues
       );
     }
 
@@ -337,9 +337,9 @@ export class ConfigService {
     const parsed = CreateEndpointInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
-        parsed.error.errors[0].message,
+        parsed.error.issues[0].message,
         "VALIDATION_ERROR",
-        parsed.error.errors
+        parsed.error.issues
       );
     }
 
@@ -396,9 +396,9 @@ export class ConfigService {
     const parsed = UpdateEndpointInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
-        parsed.error.errors[0].message,
+        parsed.error.issues[0].message,
         "VALIDATION_ERROR",
-        parsed.error.errors
+        parsed.error.issues
       );
     }
 
@@ -483,9 +483,9 @@ export class ConfigService {
     const parsed = UpdateSettingsInputSchema.safeParse(input);
     if (!parsed.success) {
       throw ApiError.validation(
-        parsed.error.errors[0].message,
+        parsed.error.issues[0].message,
         "VALIDATION_ERROR",
-        parsed.error.errors
+        parsed.error.issues
       );
     }
 

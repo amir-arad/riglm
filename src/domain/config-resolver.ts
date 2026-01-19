@@ -21,7 +21,7 @@ export const FiltersSchema = z.array(z.string());
 export const LocalServerConfigSchema = z.object({
   command: z.string().min(1),
   args: z.array(z.string()),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   description: z.string().optional(),
   filters: FiltersSchema.optional(),
 });
@@ -29,7 +29,7 @@ export const LocalServerConfigSchema = z.object({
 
 export const RemoteServerConfigSchema = z.object({
   url: z.string().min(1),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   description: z.string().optional(),
   filters: FiltersSchema.optional(),
 });
@@ -50,8 +50,8 @@ export const EndpointConfigSchema = z.object({
 
 
 export const ConfigSchema = z.object({
-  servers: z.record(ServerConfigSchema),
-  endpoints: z.record(EndpointConfigSchema),
+  servers: z.record(z.string(), ServerConfigSchema),
+  endpoints: z.record(z.string(), EndpointConfigSchema),
   filters: FiltersSchema.optional(),
 });
 
