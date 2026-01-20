@@ -22,6 +22,8 @@ import { version } from "../cli/output/version";
 interface HostSession {
   tools: ToolDefinition[];
   toolHandlers: Map<string, ToolHandler>;
+  serverOverrides: Map<string, boolean>;
+  refreshTools: () => Promise<void>;
   close: () => Promise<void>;
 }
 
@@ -30,6 +32,13 @@ export interface HostsServiceDeps {
   config: ConfiguratorPort;
   logger: LoggerPort;
   sessionBackends: SessionBackendsFactory;
+}
+
+export interface SessionInfo {
+  sessionId: string;
+  endpointId: string;
+  createdAt: Date;
+  servers: { name: string; enabled: boolean; overridden: boolean }[];
 }
 
 export interface HostsService {
@@ -41,6 +50,13 @@ export interface HostsService {
     transport: TransportPort,
     ctx?: PoolContext,
   ) => Promise<string>;
+  getSessionInfo: (sessionId: string) => Promise<SessionInfo | undefined>;
+  listSessions: () => Promise<SessionInfo[]>;
+  setServerOverride: (
+    sessionId: string,
+    serverName: string,
+    enabled: boolean | null,
+  ) => Promise<boolean>;
   status: () => { status: string; activeSessions: number };
   close: () => Promise<void>;
 }
@@ -64,6 +80,15 @@ export function createHostsServiceFactory(deps: HostsServiceDeps) {
       const tsm = new TransportSessionManager(logger);
 
       const filterEngineCache = new Map<string, FilterEngine>();
+
+      function isServerEnabled(
+        serverName: string,
+        overrides: Map<string, boolean>,
+      ): boolean {
+        if (overrides.has(serverName)) return overrides.get(serverName)!;
+        const disabledServers = endpoint.disabledServers || [];
+        return !disabledServers.includes(serverName);
+      }
 
       function getFilterEngine(serverName: string): FilterEngine {
         const currentConfig = config.get();
@@ -95,49 +120,51 @@ export function createHostsServiceFactory(deps: HostsServiceDeps) {
       ): Promise<HostSession> {
         const backends = sessionBackends(sessionId, ctx);
         const serverNames = endpoint.servers;
+        const serverOverrides = new Map<string, boolean>();
 
         const connections: BackendConnection[] = await Promise.all(
           serverNames.map((name) => backends.get(name, ctx)),
         );
 
-        const serverData = connections.map((conn) => ({
-          serverName: conn.serverName,
-          tools: conn.tools,
-          filterEngine: getFilterEngine(conn.serverName),
-        }));
-
-        const aggregatedTools = ToolAggregator.aggregateTools(serverData);
-
-        const toolHandlers = new Map<string, ToolHandler>();
-        for (const conn of connections) {
-          for (const tool of conn.tools) {
-            const namespacedName = ToolAggregator.namespace(
-              conn.serverName,
-              tool.name,
+        const session: HostSession = {
+          tools: [],
+          toolHandlers: new Map(),
+          serverOverrides,
+          refreshTools: async () => {
+            const enabledConns = connections.filter((c) =>
+              isServerEnabled(c.serverName, serverOverrides),
             );
-            toolHandlers.set(namespacedName, async (args) => {
-              logger.debug(
-                `CALLING DOWNSTREAM TOOL: ${tool.name} with args:`,
-                JSON.stringify(args),
-              );
-              const result = await conn.client.callTool({
-                name: tool.name,
-                arguments: args,
-              });
-              logger.debug(`RAW RESULT FROM DOWNSTREAM: ${JSON.stringify(result)}`);
-              return result;
-            });
-          }
-        }
-
-        return {
-          tools: aggregatedTools,
-          toolHandlers,
+            const serverData = enabledConns.map((conn) => ({
+              serverName: conn.serverName,
+              tools: conn.tools,
+              filterEngine: getFilterEngine(conn.serverName),
+            }));
+            session.tools = ToolAggregator.aggregateTools(serverData);
+            session.toolHandlers.clear();
+            for (const conn of enabledConns) {
+              for (const tool of conn.tools) {
+                const namespacedName = ToolAggregator.namespace(
+                  conn.serverName,
+                  tool.name,
+                );
+                session.toolHandlers.set(namespacedName, async (args) => {
+                  const result = await conn.client.callTool({
+                    name: tool.name,
+                    arguments: args,
+                  });
+                  return result;
+                });
+              }
+            }
+          },
           close: async () => {
             logger.info("Closing host session");
             await backends.close();
           },
         };
+
+        await session.refreshTools();
+        return session;
       }
 
       const hostSessions = createCloseablePool(
@@ -185,12 +212,61 @@ export function createHostsServiceFactory(deps: HostsServiceDeps) {
 
       mcpServer.setErrorHandler((error) => logger.error("[MCP Error]", error));
 
+      async function getSessionInfo(
+        sessionId: string,
+      ): Promise<SessionInfo | undefined> {
+        const ts = tsm.getSession(sessionId);
+        if (!ts) return undefined;
+        const hs = await hostSessions.get(sessionId);
+        return {
+          sessionId,
+          endpointId,
+          createdAt: ts.createdAt,
+          servers: endpoint.servers.map((name) => ({
+            name,
+            enabled: isServerEnabled(name, hs.serverOverrides),
+            overridden: hs.serverOverrides.has(name),
+          })),
+        };
+      }
+
+      async function listSessions(): Promise<SessionInfo[]> {
+        const infos: SessionInfo[] = [];
+        for (const sessionId of tsm.getSessionIds()) {
+          const info = await getSessionInfo(sessionId);
+          if (info) infos.push(info);
+        }
+        return infos;
+      }
+
+      async function setServerOverride(
+        sessionId: string,
+        serverName: string,
+        enabled: boolean | null,
+      ): Promise<boolean> {
+        if (!endpoint.servers.includes(serverName)) return false;
+        const ts = tsm.getSession(sessionId);
+        if (!ts) return false;
+        const hs = await hostSessions.get(sessionId);
+        if (enabled === null) {
+          hs.serverOverrides.delete(serverName);
+        } else {
+          hs.serverOverrides.set(serverName, enabled);
+        }
+        await hs.refreshTools();
+        await mcpServer.notifyToolsListChanged();
+        return true;
+      }
+
       return {
         endpointId,
         hasSession: tsm.hasSession,
         getSession: tsm.getSession,
         removeSession: tsm.removeSession,
         createSession,
+        getSessionInfo,
+        listSessions,
+        setServerOverride,
         status: () => ({
           status: "ok",
           activeSessions: tsm.getActiveSessions(),

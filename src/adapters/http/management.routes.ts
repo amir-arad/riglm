@@ -1,11 +1,15 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { ConfigService } from "../../application/config.service";
+import { CloseablePool } from "../../etc/closeable";
+import { HostsService } from "../../application/hosts.service";
 import type { LoggerPort } from "../../ports/logger.port";
 
 type IdRequest = Request<{ id: string }>;
+type ServerRequest = Request<{ id: string; server: string }>;
 
 export function makeManagementRoutes(
   configService: ConfigService,
+  hostsServices: CloseablePool<HostsService>,
   logger: LoggerPort,
 ): Router {
   const router = Router();
@@ -142,6 +146,90 @@ export function makeManagementRoutes(
           message: "Failed to reload configuration",
         });
       }
+    }),
+  );
+
+  // Session endpoints
+  router.get(
+    "/sessions",
+    asyncHandler(async (_req, res) => {
+      const sessions = [];
+      for (const endpointId of configService.listEndpoints().map((e) => e.id)) {
+        const svc = await hostsServices.get(endpointId);
+        sessions.push(...(await svc.listSessions()));
+      }
+      res.json({ sessions });
+    }),
+  );
+
+  router.get(
+    "/sessions/:id",
+    asyncHandler<IdRequest>(async (req, res) => {
+      for (const ep of configService.listEndpoints()) {
+        const svc = await hostsServices.get(ep.id);
+        const info = await svc.getSessionInfo(req.params.id);
+        if (info) {
+          res.json(info);
+          return;
+        }
+      }
+      res.status(404).json({ error: "Session not found" });
+    }),
+  );
+
+  router.post(
+    "/sessions/:id/override/:server",
+    asyncHandler<ServerRequest>(async (req, res) => {
+      const { enabled } = req.body as { enabled: boolean };
+      for (const ep of configService.listEndpoints()) {
+        const svc = await hostsServices.get(ep.id);
+        if (await svc.setServerOverride(req.params.id, req.params.server, enabled)) {
+          res.json({ ok: true });
+          return;
+        }
+      }
+      res.status(404).json({ error: "Session not found" });
+    }),
+  );
+
+  router.delete(
+    "/sessions/:id/override/:server",
+    asyncHandler<ServerRequest>(async (req, res) => {
+      for (const ep of configService.listEndpoints()) {
+        const svc = await hostsServices.get(ep.id);
+        if (await svc.setServerOverride(req.params.id, req.params.server, null)) {
+          res.json({ ok: true });
+          return;
+        }
+      }
+      res.status(404).json({ error: "Session not found" });
+    }),
+  );
+
+  // Endpoint server toggle (persistent)
+  router.put(
+    "/endpoints/:id/servers/:server/disable",
+    asyncHandler<ServerRequest>(async (req, res) => {
+      const endpoint = configService.getEndpoint(req.params.id);
+      const disabled = new Set(endpoint.disabledServers || []);
+      disabled.add(req.params.server);
+      configService.updateEndpoint(req.params.id, {
+        disabledServers: [...disabled],
+      });
+      res.json({ ok: true });
+    }),
+  );
+
+  router.put(
+    "/endpoints/:id/servers/:server/enable",
+    asyncHandler<ServerRequest>(async (req, res) => {
+      const endpoint = configService.getEndpoint(req.params.id);
+      const disabled = new Set(endpoint.disabledServers || []);
+      disabled.delete(req.params.server);
+      configService.updateEndpoint(req.params.id, {
+        disabledServers: [...disabled],
+      });
+      res.json({ ok: true });
     }),
   );
 

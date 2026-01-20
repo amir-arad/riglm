@@ -64,6 +64,7 @@ const UpdateEndpointInputSchema = z.object({
     .array(z.string())
     .min(1, "Endpoint must have at least one server")
     .optional(),
+  disabledServers: z.array(z.string()).optional(),
   filters: FiltersSchema.optional(),
 });
 
@@ -90,6 +91,7 @@ export interface EndpointWithId {
   id: string;
   description?: string;
   servers: string[];
+  disabledServers?: string[];
   filters?: Filters;
 }
 
@@ -516,6 +518,7 @@ export class ConfigService {
       id,
       description: endpoint.description,
       servers: endpoint.servers,
+      disabledServers: endpoint.disabledServers,
       filters: endpoint.filters,
     };
   }

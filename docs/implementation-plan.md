@@ -9,7 +9,7 @@ Transform the MCP router (RigLM) into a full-featured Personal AI Extension Mana
 | Phase | Focus | Status |
 |-------|-------|--------|
 | 1 | Foundation & Cleanup | ✅ Complete |
-| 2 | Layered Server Toggle | Planned |
+| 2 | Layered Server Toggle | ✅ Complete |
 | 3 | Sessions UI | Planned |
 
 ---
@@ -154,11 +154,11 @@ Update existing Endpoints view:
 - [x] Can connect MCP client to endpoint
 - [x] 110 tests passing
 
-### After Phase 2
-- [ ] `GET /api/sessions` returns active sessions
-- [ ] `POST /api/sessions/:id/override/:server` toggles server for session
-- [ ] MCP client receives `tools/list_changed` notification
-- [ ] Tool list updates correctly after toggle
+### After Phase 2 ✅
+- [x] `GET /api/sessions` returns active sessions
+- [x] `POST /api/sessions/:id/override/:server` toggles server for session
+- [x] MCP client receives `tools/list_changed` notification
+- [x] Tool list updates correctly after toggle
 
 ### After Phase 3
 - [ ] Sessions view shows live connections

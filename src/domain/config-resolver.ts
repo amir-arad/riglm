@@ -32,6 +32,7 @@ export const ServerConfigSchema = z.union([
 export const EndpointConfigSchema = z.object({
   description: z.string().optional(),
   servers: z.array(z.string()).min(1, "Endpoint must have at least one server"),
+  disabledServers: z.array(z.string()).optional(),
   filters: FiltersSchema.optional(),
   apiKey: z.string().optional(),
 });
@@ -100,6 +101,11 @@ export class ConfigResolver {
   getEndpointServers(endpointId: Identifier): Identifier[] {
     const endpoint = this.config.endpoints[endpointId];
     return endpoint?.servers || [];
+  }
+
+  getDisabledServers(endpointId: Identifier): Identifier[] {
+    const endpoint = this.config.endpoints[endpointId];
+    return endpoint?.disabledServers || [];
   }
 
   getEndpointIds(): Identifier[] {

@@ -17,6 +17,8 @@ export interface McpServerPort {
 
   setErrorHandler(handler: (error: Error) => void): void;
 
+  notifyToolsListChanged(): Promise<void>;
+
   close(): Promise<void>;
 }
 

@@ -140,7 +140,7 @@ export class RiglmServer {
     }
 
     if (enableApi) {
-      app.use("/api", makeManagementRoutes(this.configService, logger));
+      app.use("/api", makeManagementRoutes(this.configService, this.hostsServices, logger));
     } else {
       logger.info("Management API disabled");
     }

@@ -105,6 +105,10 @@ export function createMcpServerAdapter(config: McpServerConfig): McpServerPort {
       server.onerror = handler;
     },
 
+    async notifyToolsListChanged(): Promise<void> {
+      await server.sendToolListChanged();
+    },
+
     async close(): Promise<void> {
       await server.close();
     },

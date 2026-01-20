@@ -118,6 +118,8 @@ export class TransportSessionManager {
 
   hasSession = (sessionId: string): boolean => this.sessions.has(sessionId);
 
+  getSessionIds = (): string[] => [...this.sessions.keys()];
+
   removeSession = async (sessionId: string): Promise<void> => {
     const session = this.sessions.get(sessionId);
     if (!session) return;
